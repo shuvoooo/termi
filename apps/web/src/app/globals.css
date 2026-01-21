@@ -1,0 +1,313 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   CSS VARIABLES
+   ============================================================================ */
+:root {
+  /* Colors */
+  --color-primary: #0ea5e9;
+  --color-primary-dark: #0284c7;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-elevated: #334155;
+  --color-border: #475569;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  
+  /* Terminal colors */
+  --terminal-bg: #0d1117;
+  --terminal-fg: #c9d1d9;
+  --terminal-cursor: #58a6ff;
+  
+  /* Spacing */
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+html,
+body {
+  height: 100%;
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent overscroll bounce on iOS */
+html {
+  overscroll-behavior: none;
+}
+
+/* ============================================================================
+   SCROLLBAR STYLING
+   ============================================================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+@layer utilities {
+  /* Glass effect */
+  .glass {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Glow effect */
+  .glow {
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+  }
+  
+  /* Safe area padding for mobile */
+  .pb-safe {
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Terminal container */
+  .terminal-container {
+    background: var(--terminal-bg);
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* ============================================================================
+   COMPONENT STYLES
+   ============================================================================ */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply transition-all duration-200 ease-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply bg-sky-500 text-white;
+    @apply hover:bg-sky-600 active:bg-sky-700;
+    @apply focus:ring-sky-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-slate-700 text-white border border-slate-600;
+    @apply hover:bg-slate-600 active:bg-slate-500;
+    @apply focus:ring-slate-500;
+  }
+  
+  .btn-ghost {
+    @apply text-slate-300 hover:text-white hover:bg-slate-700;
+    @apply focus:ring-slate-500;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white;
+    @apply hover:bg-red-700 active:bg-red-800;
+    @apply focus:ring-red-500;
+  }
+  
+  .btn-sm {
+    @apply text-sm px-3 py-1.5;
+  }
+  
+  .btn-lg {
+    @apply text-lg px-6 py-3;
+  }
+  
+  .btn-icon {
+    @apply p-2 aspect-square;
+  }
+  
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg;
+    @apply bg-slate-800 border border-slate-600;
+    @apply text-white placeholder-slate-400;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .input-error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+  
+  /* Cards */
+  .card {
+    @apply bg-slate-800 rounded-xl border border-slate-700;
+    @apply overflow-hidden;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200;
+    @apply hover:border-slate-600 hover:shadow-lg hover:shadow-black/20;
+  }
+  
+  /* Labels */
+  .label {
+    @apply block text-sm font-medium text-slate-300 mb-1.5;
+  }
+  
+  /* Error text */
+  .error-text {
+    @apply text-sm text-red-400 mt-1;
+  }
+  
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-sky-500/20 text-sky-400;
+  }
+  
+  .badge-success {
+    @apply bg-green-500/20 text-green-400;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-500/20 text-yellow-400;
+  }
+  
+  .badge-danger {
+    @apply bg-red-500/20 text-red-400;
+  }
+  
+  /* Protocol badges */
+  .protocol-ssh {
+    @apply bg-green-500/20 text-green-400;
+  }
+  
+  .protocol-scp {
+    @apply bg-blue-500/20 text-blue-400;
+  }
+  
+  .protocol-rdp {
+    @apply bg-purple-500/20 text-purple-400;
+  }
+  
+  .protocol-vnc {
+    @apply bg-orange-500/20 text-orange-400;
+  }
+}
+
+/* ============================================================================
+   XTERM.JS OVERRIDES
+   ============================================================================ */
+.xterm {
+  padding: 8px;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.xterm-screen {
+  margin: 0 auto;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-surface-elevated) 50%,
+    var(--color-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================================================
+   MOBILE VIRTUAL KEYBOARD
+   ============================================================================ */
+.virtual-keyboard {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+  padding: 8px;
+  padding-bottom: max(8px, var(--safe-area-inset-bottom));
+}
+
+.virtual-key {
+  @apply flex items-center justify-center;
+  @apply min-w-[40px] h-10 px-2;
+  @apply bg-slate-700 rounded-lg;
+  @apply text-sm font-medium text-slate-200;
+  @apply active:bg-slate-600 active:scale-95;
+  @apply transition-all duration-75;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.virtual-key-active {
+  @apply bg-sky-600 text-white;
+}
+
+.virtual-key-modifier {
+  @apply min-w-[60px];
+}

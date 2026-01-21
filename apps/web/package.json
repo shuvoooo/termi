@@ -1,0 +1,59 @@
+{
+    "name": "@termo/web",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "test": "vitest",
+        "test:e2e": "playwright test",
+        "db:push": "prisma db push",
+        "db:migrate": "prisma migrate dev",
+        "db:generate": "prisma generate",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:studio": "prisma studio"
+    },
+    "dependencies": {
+        "@prisma/adapter-pg": "^7.2.0",
+        "@prisma/client": "^7.2.0",
+        "@xterm/addon-fit": "^0.11.0",
+        "@xterm/addon-web-links": "^0.12.0",
+        "@xterm/xterm": "^6.0.0",
+        "clsx": "^2.1.1",
+        "dotenv": "^17.2.3",
+        "iron-session": "^8.0.4",
+        "jose": "^6.1.3",
+        "lucide-react": "^0.562.0",
+        "next": "^16.1.4",
+        "otpauth": "^9.4.1",
+        "pg": "^8.17.2",
+        "qrcode": "^1.5.4",
+        "react": "^19.2.3",
+        "react-dom": "^19.2.3",
+        "tailwind-merge": "^3.4.0",
+        "zod": "^4.3.5"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.57.0",
+        "@tailwindcss/postcss": "^4.1.18",
+        "@types/node": "^25.0.9",
+        "@types/pg": "^8.16.0",
+        "@types/qrcode": "^1.5.6",
+        "@types/react": "^19.2.9",
+        "@types/react-dom": "^19.2.3",
+        "autoprefixer": "^10.4.23",
+        "eslint": "^9.39.2",
+        "eslint-config-next": "^16.1.4",
+        "postcss": "^8.5.6",
+        "prisma": "^7.2.0",
+        "tailwindcss": "^4.1.18",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.17"
+    },
+    "overrides": {
+        "argon2": "npm:@node-rs/argon2@^1.7.0"
+    }
+}

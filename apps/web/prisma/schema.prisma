@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String // Argon2id hash
+
+  // TOTP 2FA
+  totpSecret  String? // Encrypted TOTP secret
+  totpEnabled Boolean @default(false)
+
+  // Optional master key for additional encryption layer
+  // When set, all credentials are encrypted with user's master key
+  masterKeyHash String? // Hash of derived key for verification
+  masterKeySalt String? // Salt used for key derivation
+
+  // Account status
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  sessions     Session[]
+  servers      Server[]
+  serverGroups ServerGroup[]
+  auditLogs    AuditLog[]
+
+  @@index([email])
+}
+
+model Session {
+  id     String @id @default(cuid())
+  userId String
+
+  // Session token (hashed for storage)
+  tokenHash String @unique
+
+  // Device and location info
+  deviceInfo String // User agent / device description
+  ipAddress  String
+
+  // Session validity
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+
+  // Session can be revoked by user
+  isRevoked     Boolean   @default(false)
+  revokedAt     DateTime?
+  revokedReason String?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// SERVER MANAGEMENT
+// ============================================================================
+
+model ServerGroup {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  description String?
+  color       String? // Hex color for UI
+  icon        String? // Icon identifier
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  servers Server[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Server {
+  id      String  @id @default(cuid())
+  userId  String
+  groupId String?
+
+  // Display info
+  name        String
+  description String?
+  tags        String[]
+  color       String?
+  icon        String?
+
+  // Connection info (encrypted)
+  host     String // Encrypted: IP or hostname
+  port     Int
+  protocol Protocol
+
+  // Credentials (encrypted)
+  username   String // Encrypted
+  password   String? // Encrypted (optional - for password auth)
+  privateKey String? // Encrypted (optional - for SSH key auth)
+  passphrase String? // Encrypted (optional - key passphrase)
+
+  // Additional settings
+  notes      String? // Encrypted notes
+  sshOptions Json? // Additional SSH options
+
+  // For VNC/RDP specific settings
+  displayWidth  Int? @default(1920)
+  displayHeight Int? @default(1080)
+  colorDepth    Int? @default(24)
+
+  // Favorites and usage
+  isFavorite Boolean   @default(false)
+  lastUsedAt DateTime?
+  useCount   Int       @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       ServerGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  connections Connection[]
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([protocol])
+  @@index([isFavorite])
+}
+
+// ============================================================================
+// CONNECTION TRACKING
+// ============================================================================
+
+model Connection {
+  id        String @id @default(cuid())
+  serverId  String
+  sessionId String
+
+  protocol Protocol
+  status   ConnectionStatus
+
+  // Timing
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  // Stats
+  bytesIn  BigInt @default(0)
+  bytesOut BigInt @default(0)
+
+  // Error info if failed
+  errorMessage String?
+
+  // Relations
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([sessionId])
+  @@index([startedAt])
+}
+
+// ============================================================================
+// AUDIT LOGGING
+// ============================================================================
+
+model AuditLog {
+  id     String  @id @default(cuid())
+  userId String?
+
+  action   AuditAction
+  resource String? // e.g., "server:abc123"
+  details  Json? // Additional action details
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Protocol {
+  SSH
+  SCP
+  RDP
+  VNC
+}
+
+enum ConnectionStatus {
+  CONNECTING
+  CONNECTED
+  DISCONNECTED
+  FAILED
+}
+
+enum AuditAction {
+  // Auth events
+  USER_REGISTER
+  USER_LOGIN
+  USER_LOGOUT
+  USER_LOGIN_FAILED
+  USER_2FA_ENABLED
+  USER_2FA_DISABLED
+  USER_PASSWORD_CHANGED
+  USER_MASTER_KEY_SET
+  USER_MASTER_KEY_REMOVED
+
+  // Session events
+  SESSION_CREATED
+  SESSION_REVOKED
+  SESSION_EXPIRED
+
+  // Server events
+  SERVER_CREATED
+  SERVER_UPDATED
+  SERVER_DELETED
+
+  // Connection events
+  CONNECTION_STARTED
+  CONNECTION_ENDED
+  CONNECTION_FAILED
+
+  // Group events
+  GROUP_CREATED
+  GROUP_UPDATED
+  GROUP_DELETED
+}

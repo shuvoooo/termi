@@ -1,0 +1,31 @@
+{
+  "name": "termo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure server management PWA - SSH, SCP, RDP, VNC from your browser",
+  "license": "MIT",
+  "author": "Termo Contributors",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:gateway": "npm run dev --workspace=apps/gateway",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:gateway\"",
+    "build": "npm run build --workspace=apps/web && npm run build --workspace=apps/gateway",
+    "start": "npm run start --workspace=apps/web",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "db:push": "npm run db:push --workspace=apps/web",
+    "db:migrate": "npm run db:migrate --workspace=apps/web",
+    "db:seed": "npm run db:seed --workspace=apps/web",
+    "db:studio": "npm run db:studio --workspace=apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
