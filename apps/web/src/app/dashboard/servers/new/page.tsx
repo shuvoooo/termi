@@ -116,7 +116,12 @@ export default function NewServerPage() {
         }
     };
 
-    const canTest = !!(form.host.trim() && form.port > 0 && form.username.trim());
+    const isSSHProto = form.protocol === 'SSH' || form.protocol === 'SCP';
+    const hasAuth = form.authMethod === 'password' ? !!form.password.trim() : !!form.privateKey.trim();
+    const canTest = !!(
+        form.host.trim() && form.port > 0 && form.username.trim() &&
+        (!isSSHProto || hasAuth)
+    );
 
     const handleTest = async () => {
         if (!canTest) return;
@@ -126,7 +131,15 @@ export default function NewServerPage() {
             const res = await fetch('/api/servers/test', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ host: form.host, port: form.port }),
+                body: JSON.stringify({
+                    host:       form.host,
+                    port:       form.port,
+                    protocol:   form.protocol,
+                    username:   form.username,
+                    password:   form.authMethod === 'password' ? form.password : undefined,
+                    privateKey: form.authMethod === 'key'      ? form.privateKey  : undefined,
+                    passphrase: form.authMethod === 'key'      ? form.passphrase  : undefined,
+                }),
             });
             const data = await res.json();
             if (data.success) {
@@ -555,7 +568,9 @@ export default function NewServerPage() {
 
                         {/* Test connection */}
                         <div className="card p-4">
-                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Connectivity</p>
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                                {isSSHProto ? 'Authentication Test' : 'Connectivity'}
+                            </p>
 
                             <button
                                 type="button"
@@ -576,15 +591,18 @@ export default function NewServerPage() {
                                 ) : testStatus === 'success' ? (
                                     <><CheckCircle2 className="w-3.5 h-3.5" /> Test Again</>
                                 ) : testStatus === 'failed' ? (
-                                    <><AlertCircle className="w-3.5 h-3.5" /> Retry Test</>
+                                    <><AlertCircle className="w-3.5 h-3.5" /> Retry</>
                                 ) : (
-                                    <><Activity className="w-3.5 h-3.5" /> Test Connection</>
+                                    <><Activity className="w-3.5 h-3.5" />
+                                        {isSSHProto ? 'Test Authentication' : 'Test Connection'}</>
                                 )}
                             </button>
 
                             {!canTest && (
                                 <p className="text-[11px] text-slate-600 mt-2 text-center">
-                                    Enter host, port &amp; username first
+                                    {isSSHProto
+                                        ? 'Enter host, username & credentials first'
+                                        : 'Enter host & port first'}
                                 </p>
                             )}
 
@@ -592,7 +610,9 @@ export default function NewServerPage() {
                                 <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-lg bg-green-500/8 border border-green-500/20">
                                     <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
                                     <div>
-                                        <p className="text-xs font-medium text-green-400">Port reachable</p>
+                                        <p className="text-xs font-medium text-green-400">
+                                            {isSSHProto ? 'Authentication successful' : 'Port reachable'}
+                                        </p>
                                         <p className="text-[11px] text-green-500/60">Latency: {testResult.latency}ms</p>
                                     </div>
                                 </div>
@@ -602,7 +622,9 @@ export default function NewServerPage() {
                                 <div className="mt-3 flex items-start gap-2.5 p-2.5 rounded-lg bg-red-500/8 border border-red-500/20">
                                     <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="text-xs font-medium text-red-400">Unreachable</p>
+                                        <p className="text-xs font-medium text-red-400">
+                                            {isSSHProto ? 'Authentication failed' : 'Unreachable'}
+                                        </p>
                                         <p className="text-[11px] text-red-400/60 break-words">{testResult.error}</p>
                                     </div>
                                 </div>

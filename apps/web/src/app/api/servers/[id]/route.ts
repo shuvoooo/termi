@@ -56,7 +56,17 @@ export async function GET(request: Request, { params }: RouteParams) {
             return notFoundResponse('Server not found');
         }
 
-        return successResponse({ server });
+        // Never send credentials back to the client — only expose whether they are set.
+        // Callers that need credentials use getServerForConnection() server-side.
+        const { password, privateKey, passphrase, ...safeFields } = server;
+        return successResponse({
+            server: {
+                ...safeFields,
+                hasPassword:    !!password,
+                hasPrivateKey:  !!privateKey,
+                hasPassphrase:  !!passphrase,
+            },
+        });
     } catch (error) {
         console.error('Get server error:', error);
         return errorResponse('Failed to fetch server', 500);

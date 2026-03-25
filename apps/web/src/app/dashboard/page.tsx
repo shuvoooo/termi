@@ -1,20 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-    Server,
-    Terminal,
-    FolderOpen,
-    Monitor,
-    Plus,
-    Star,
-    StarOff,
-    MoreVertical,
-    Search,
-    RefreshCw,
-    Layers,
+    Server, Terminal, FolderOpen, Monitor, Plus,
+    Star, StarOff, MoreVertical, Search, RefreshCw,
+    Layers, Pencil, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { useSessionsContext } from './sessions-context';
 
@@ -107,6 +99,10 @@ export default function DashboardPage() {
     const [filter, setFilter] = useState<'all' | 'favorites'>('all');
     const [metrics, setMetrics] = useState<Record<string, ServerMetrics | null>>({});
     const [metricsLoading, setMetricsLoading] = useState<Record<string, boolean>>({});
+    const [openMenu, setOpenMenu] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<ServerItem | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     const fetchServers = async () => {
         setLoading(true);
@@ -205,7 +201,38 @@ export default function DashboardPage() {
         router.push('/dashboard/sessions');
     };
 
+    const handleDelete = async () => {
+        if (!deleteConfirm) return;
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/servers/${deleteConfirm.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setServers((prev) => prev.filter((s) => s.id !== deleteConfirm.id));
+                setMetrics((prev) => { const next = { ...prev }; delete next[deleteConfirm.id]; return next; });
+                setDeleteConfirm(null);
+            }
+        } catch (error) {
+            console.error('Failed to delete server:', error);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!openMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpenMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [openMenu]);
+
     return (
+        <>
         <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -319,9 +346,33 @@ export default function DashboardPage() {
                                                 {server.description || server.protocol}
                                             </p>
                                         </div>
-                                        <button className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <MoreVertical className="w-4 h-4" />
-                                        </button>
+                                        <div className="relative" ref={openMenu === server.id ? menuRef : undefined}>
+                                            <button
+                                                onClick={() => setOpenMenu(openMenu === server.id ? null : server.id)}
+                                                className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                            {openMenu === server.id && (
+                                                <div className="absolute right-0 top-7 z-20 w-36 rounded-lg border border-dark-700 bg-dark-800 shadow-xl py-1">
+                                                    <Link
+                                                        href={`/dashboard/servers/${server.id}/edit`}
+                                                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-dark-700 transition-colors"
+                                                        onClick={() => setOpenMenu(null)}
+                                                    >
+                                                        <Pencil className="w-3.5 h-3.5 text-dark-400" />
+                                                        Edit
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => { setDeleteConfirm(server); setOpenMenu(null); }}
+                                                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-dark-700 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Tags & Group */}
@@ -418,5 +469,43 @@ export default function DashboardPage() {
                 </div>
             )}
         </div>
+        {/* Delete confirmation modal */}
+        {deleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div className="card w-full max-w-md mx-4 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div>
+                            <h2 className="font-semibold">Delete Server</h2>
+                            <p className="text-sm text-dark-400">This action cannot be undone.</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-dark-300 mb-6">
+                        Are you sure you want to delete{' '}
+                        <span className="font-medium text-white">{deleteConfirm.name}</span>?
+                        All associated data will be permanently removed.
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                        <button
+                            onClick={() => setDeleteConfirm(null)}
+                            disabled={deleting}
+                            className="btn btn-secondary"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            className="btn bg-red-600 hover:bg-red-500 text-white"
+                        >
+                            {deleting ? 'Deleting...' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
