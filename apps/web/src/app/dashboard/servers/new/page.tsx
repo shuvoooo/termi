@@ -13,6 +13,16 @@ import {
     EyeOff,
     Plus,
     X,
+    CheckCircle2,
+    AlertCircle,
+    ChevronDown,
+    ChevronUp,
+    Lock,
+    Key,
+    Tag,
+    Globe,
+    Activity,
+    Tv,
 } from 'lucide-react';
 
 interface Group {
@@ -22,18 +32,38 @@ interface Group {
 }
 
 const protocols = [
-    { value: 'SSH', label: 'SSH', icon: Terminal, description: 'Secure shell terminal', color: 'green' },
-    { value: 'SCP', label: 'SCP', icon: FolderOpen, description: 'Secure file transfer', color: 'blue' },
-    { value: 'RDP', label: 'RDP', icon: Monitor, description: 'Windows Remote Desktop', color: 'purple' },
-    { value: 'VNC', label: 'VNC', icon: Monitor, description: 'Virtual Network Computing', color: 'orange' },
-];
+    { value: 'SSH', label: 'SSH', icon: Terminal, desc: 'Secure Shell' },
+    { value: 'SCP', label: 'SCP', icon: FolderOpen, desc: 'File Transfer' },
+    { value: 'RDP', label: 'RDP', icon: Monitor, desc: 'Remote Desktop' },
+    { value: 'VNC', label: 'VNC', icon: Tv, desc: 'Virtual Console' },
+] as const;
 
-const defaultPorts = {
-    SSH: 22,
-    SCP: 22,
-    RDP: 3389,
-    VNC: 5900,
+const defaultPorts = { SSH: 22, SCP: 22, RDP: 3389, VNC: 5900 };
+
+const protoColors = {
+    SSH: {
+        pill: 'bg-green-500/15 text-green-400 border-green-500/30',
+        ring: 'ring-green-500/40 border-green-500/60',
+        badge: 'bg-green-500/15 text-green-400',
+    },
+    SCP: {
+        pill: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+        ring: 'ring-blue-500/40 border-blue-500/60',
+        badge: 'bg-blue-500/15 text-blue-400',
+    },
+    RDP: {
+        pill: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+        ring: 'ring-purple-500/40 border-purple-500/60',
+        badge: 'bg-purple-500/15 text-purple-400',
+    },
+    VNC: {
+        pill: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+        ring: 'ring-orange-500/40 border-orange-500/60',
+        badge: 'bg-orange-500/15 text-orange-400',
+    },
 };
+
+type TestStatus = 'idle' | 'testing' | 'success' | 'failed';
 
 export default function NewServerPage() {
     const router = useRouter();
@@ -42,12 +72,16 @@ export default function NewServerPage() {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showPassphrase, setShowPassphrase] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [testStatus, setTestStatus] = useState<TestStatus>('idle');
+    const [testResult, setTestResult] = useState<{ latency?: number; error?: string } | null>(null);
+    const [tagInput, setTagInput] = useState('');
 
-    const [formData, setFormData] = useState({
+    const [form, setForm] = useState({
         name: '',
         description: '',
         groupId: '',
-        protocol: 'SSH',
+        protocol: 'SSH' as keyof typeof defaultPorts,
         host: '',
         port: 22,
         username: '',
@@ -58,79 +92,85 @@ export default function NewServerPage() {
         notes: '',
         tags: [] as string[],
     });
-    const [tagInput, setTagInput] = useState('');
 
     useEffect(() => {
-        async function fetchGroups() {
-            try {
-                const response = await fetch('/api/groups');
-                const data = await response.json();
-                if (data.success) {
-                    setGroups(data.data.groups);
-                }
-            } catch (error) {
-                console.error('Failed to fetch groups:', error);
-            }
-        }
-        fetchGroups();
+        fetch('/api/groups')
+            .then((r) => r.json())
+            .then((d) => { if (d.success) setGroups(d.data.groups); })
+            .catch(() => {});
     }, []);
 
-    const handleProtocolChange = (protocol: string) => {
-        setFormData({
-            ...formData,
-            protocol,
-            port: defaultPorts[protocol as keyof typeof defaultPorts],
-        });
+    const update = (fields: Partial<typeof form>) => setForm((f) => ({ ...f, ...fields }));
+
+    const handleProtocolChange = (protocol: keyof typeof defaultPorts) => {
+        update({ protocol, port: defaultPorts[protocol] });
+        setTestStatus('idle');
+        setTestResult(null);
     };
 
     const addTag = () => {
         const tag = tagInput.trim();
-        if (tag && !formData.tags.includes(tag)) {
-            setFormData({ ...formData, tags: [...formData.tags, tag] });
+        if (tag && !form.tags.includes(tag)) {
+            update({ tags: [...form.tags, tag] });
             setTagInput('');
         }
     };
 
-    const removeTag = (tag: string) => {
-        setFormData({
-            ...formData,
-            tags: formData.tags.filter((t) => t !== tag),
-        });
+    const canTest = !!(form.host.trim() && form.port > 0 && form.username.trim());
+
+    const handleTest = async () => {
+        if (!canTest) return;
+        setTestStatus('testing');
+        setTestResult(null);
+        try {
+            const res = await fetch('/api/servers/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: form.host, port: form.port }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setTestStatus('success');
+                setTestResult({ latency: data.latency });
+            } else {
+                setTestStatus('failed');
+                setTestResult({ error: data.error });
+            }
+        } catch {
+            setTestStatus('failed');
+            setTestResult({ error: 'Network error' });
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
-            const response = await fetch('/api/servers', {
+            const res = await fetch('/api/servers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: formData.name,
-                    description: formData.description || undefined,
-                    groupId: formData.groupId || undefined,
-                    protocol: formData.protocol,
-                    host: formData.host,
-                    port: formData.port,
-                    username: formData.username,
-                    password: formData.authMethod === 'password' ? formData.password : undefined,
-                    privateKey: formData.authMethod === 'key' ? formData.privateKey : undefined,
-                    passphrase: formData.authMethod === 'key' ? formData.passphrase : undefined,
-                    notes: formData.notes || undefined,
-                    tags: formData.tags.length > 0 ? formData.tags : undefined,
+                    name: form.name,
+                    description: form.description || undefined,
+                    groupId: form.groupId || undefined,
+                    protocol: form.protocol,
+                    host: form.host,
+                    port: form.port,
+                    username: form.username,
+                    password: form.authMethod === 'password' ? form.password : undefined,
+                    privateKey: form.authMethod === 'key' ? form.privateKey : undefined,
+                    passphrase: form.authMethod === 'key' ? form.passphrase : undefined,
+                    notes: form.notes || undefined,
+                    tags: form.tags.length > 0 ? form.tags : undefined,
                 }),
             });
-
-            const data = await response.json();
-
+            const data = await res.json();
             if (!data.success) {
                 setError(data.error || 'Failed to create server');
                 setLoading(false);
                 return;
             }
-
             router.push('/dashboard');
         } catch {
             setError('An error occurred. Please try again.');
@@ -138,360 +178,460 @@ export default function NewServerPage() {
         }
     };
 
+    const proto = protocols.find((p) => p.value === form.protocol)!;
+    const ProtoIcon = proto.icon;
+    const colors = protoColors[form.protocol];
+    const selectedGroup = groups.find((g) => g.id === form.groupId);
+
     return (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-5xl mx-auto">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-                <Link href="/dashboard" className="btn btn-ghost btn-icon">
-                    <ArrowLeft className="w-5 h-5" />
+            <div className="flex items-center gap-3 mb-5">
+                <Link href="/dashboard" className="btn btn-ghost btn-icon btn-sm">
+                    <ArrowLeft className="w-4 h-4" />
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold">Add Server</h1>
-                    <p className="text-dark-400 mt-1">
-                        Configure a new server connection
-                    </p>
+                    <h1 className="text-xl font-semibold">Add Server</h1>
+                    <p className="text-slate-400 text-sm">Configure a new connection</p>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Protocol Selection */}
-                <div>
-                    <label className="label">Protocol</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {protocols.map((p) => (
-                            <button
-                                key={p.value}
-                                type="button"
-                                onClick={() => handleProtocolChange(p.value)}
-                                className={`card p-3 text-center transition-all ${formData.protocol === p.value
-                                        ? 'ring-2 ring-primary-500 border-primary-500'
-                                        : 'hover:border-dark-600'
-                                    }`}
-                            >
-                                <p.icon
-                                    className={`w-6 h-6 mx-auto mb-1 ${formData.protocol === p.value
-                                            ? 'text-primary-400'
-                                            : 'text-dark-400'
-                                        }`}
-                                />
-                                <span className="text-sm font-medium">{p.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-                {/* Basic Info */}
-                <div className="card p-6 space-y-4">
-                    <h2 className="font-medium">Basic Information</h2>
+                    {/* ── LEFT: Form ── */}
+                    <div className="lg:col-span-3 space-y-3">
 
-                    <div>
-                        <label htmlFor="name" className="label">
-                            Server Name
-                        </label>
-                        <input
-                            type="text"
-                            id="name"
-                            value={formData.name}
-                            onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
-                            }
-                            className="input"
-                            placeholder="My Server"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="description" className="label">
-                            Description
-                            <span className="text-dark-500 ml-1">(optional)</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="description"
-                            value={formData.description}
-                            onChange={(e) =>
-                                setFormData({ ...formData, description: e.target.value })
-                            }
-                            className="input"
-                            placeholder="Production web server"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="group" className="label">
-                            Group
-                            <span className="text-dark-500 ml-1">(optional)</span>
-                        </label>
-                        <select
-                            id="group"
-                            value={formData.groupId}
-                            onChange={(e) =>
-                                setFormData({ ...formData, groupId: e.target.value })
-                            }
-                            className="input"
-                        >
-                            <option value="">No group</option>
-                            {groups.map((group) => (
-                                <option key={group.id} value={group.id}>
-                                    {group.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Connection */}
-                <div className="card p-6 space-y-4">
-                    <h2 className="font-medium">Connection</h2>
-
-                    <div className="grid sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-2">
-                            <label htmlFor="host" className="label">
-                                Host / IP Address
-                            </label>
-                            <input
-                                type="text"
-                                id="host"
-                                value={formData.host}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, host: e.target.value })
-                                }
-                                className="input"
-                                placeholder="192.168.1.100 or example.com"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="port" className="label">
-                                Port
-                            </label>
-                            <input
-                                type="number"
-                                id="port"
-                                value={formData.port}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, port: parseInt(e.target.value) })
-                                }
-                                className="input"
-                                min={1}
-                                max={65535}
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="username" className="label">
-                            Username
-                        </label>
-                        <input
-                            type="text"
-                            id="username"
-                            value={formData.username}
-                            onChange={(e) =>
-                                setFormData({ ...formData, username: e.target.value })
-                            }
-                            className="input"
-                            placeholder="root"
-                            required
-                        />
-                    </div>
-                </div>
-
-                {/* Authentication */}
-                <div className="card p-6 space-y-4">
-                    <h2 className="font-medium">Authentication</h2>
-
-                    {(formData.protocol === 'SSH' || formData.protocol === 'SCP') && (
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setFormData({ ...formData, authMethod: 'password' })
-                                }
-                                className={`btn ${formData.authMethod === 'password'
-                                        ? 'btn-primary'
-                                        : 'btn-secondary'
-                                    }`}
-                            >
-                                Password
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, authMethod: 'key' })}
-                                className={`btn ${formData.authMethod === 'key' ? 'btn-primary' : 'btn-secondary'
-                                    }`}
-                            >
-                                SSH Key
-                            </button>
-                        </div>
-                    )}
-
-                    {formData.authMethod === 'password' && (
-                        <div>
-                            <label htmlFor="password" className="label">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    id="password"
-                                    value={formData.password}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, password: e.target.value })
-                                    }
-                                    className="input pr-12"
-                                    placeholder="••••••••"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
-                                >
-                                    {showPassword ? (
-                                        <EyeOff className="w-5 h-5" />
-                                    ) : (
-                                        <Eye className="w-5 h-5" />
-                                    )}
-                                </button>
+                        {/* Protocol selector */}
+                        <div className="card p-4">
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Protocol</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {protocols.map((p) => {
+                                    const isActive = form.protocol === p.value;
+                                    const c = protoColors[p.value];
+                                    const Icon = p.icon;
+                                    return (
+                                        <button
+                                            key={p.value}
+                                            type="button"
+                                            onClick={() => handleProtocolChange(p.value)}
+                                            className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all duration-150 ${
+                                                isActive
+                                                    ? `${c.pill} ${c.ring} ring-1`
+                                                    : 'border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300 hover:bg-slate-700/30'
+                                            }`}
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            <span className="text-xs font-semibold">{p.label}</span>
+                                            <span className="text-[10px] opacity-60 hidden sm:block leading-none">{p.desc}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
-                    )}
 
-                    {formData.authMethod === 'key' && (
-                        <>
-                            <div>
-                                <label htmlFor="privateKey" className="label">
-                                    Private Key
-                                </label>
-                                <textarea
-                                    id="privateKey"
-                                    value={formData.privateKey}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, privateKey: e.target.value })
-                                    }
-                                    className="input min-h-[150px] font-mono text-sm"
-                                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----
-...
------END OPENSSH PRIVATE KEY-----"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="passphrase" className="label">
-                                    Key Passphrase
-                                    <span className="text-dark-500 ml-1">(if encrypted)</span>
-                                </label>
-                                <div className="relative">
+                        {/* Identity + Connection — combined card */}
+                        <div className="card divide-y divide-slate-700/50">
+                            {/* Name + Group */}
+                            <div className="p-4 grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="label text-xs">
+                                        Name <span className="text-red-400">*</span>
+                                    </label>
                                     <input
-                                        type={showPassphrase ? 'text' : 'password'}
-                                        id="passphrase"
-                                        value={formData.passphrase}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, passphrase: e.target.value })
-                                        }
-                                        className="input pr-12"
+                                        type="text"
+                                        value={form.name}
+                                        onChange={(e) => update({ name: e.target.value })}
+                                        className="input text-sm py-2"
+                                        placeholder="Production Web"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="label text-xs">
+                                        Group <span className="text-slate-600">(optional)</span>
+                                    </label>
+                                    <select
+                                        value={form.groupId}
+                                        onChange={(e) => update({ groupId: e.target.value })}
+                                        className="input text-sm py-2"
+                                    >
+                                        <option value="">No group</option>
+                                        {groups.map((g) => (
+                                            <option key={g.id} value={g.id}>{g.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Host + Port + Username */}
+                            <div className="p-4 space-y-3">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="label text-xs">
+                                            Host / IP <span className="text-red-400">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.host}
+                                            onChange={(e) => {
+                                                update({ host: e.target.value });
+                                                setTestStatus('idle');
+                                                setTestResult(null);
+                                            }}
+                                            className="input text-sm py-2 font-mono"
+                                            placeholder="192.168.1.100"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label text-xs">Port</label>
+                                        <input
+                                            type="number"
+                                            value={form.port}
+                                            onChange={(e) => {
+                                                update({ port: parseInt(e.target.value) || 0 });
+                                                setTestStatus('idle');
+                                                setTestResult(null);
+                                            }}
+                                            className="input text-sm py-2 font-mono"
+                                            min={1}
+                                            max={65535}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="label text-xs">
+                                        Username <span className="text-red-400">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.username}
+                                        onChange={(e) => update({ username: e.target.value })}
+                                        className="input text-sm py-2"
+                                        placeholder="root"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Authentication */}
+                        <div className="card p-4 space-y-3">
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Authentication</p>
+
+                            {(form.protocol === 'SSH' || form.protocol === 'SCP') && (
+                                <div className="flex gap-1 p-1 bg-slate-900/60 rounded-lg w-fit border border-slate-700/50">
+                                    {(['password', 'key'] as const).map((method) => (
+                                        <button
+                                            key={method}
+                                            type="button"
+                                            onClick={() => update({ authMethod: method })}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                                form.authMethod === method
+                                                    ? 'bg-sky-500 text-white shadow-sm'
+                                                    : 'text-slate-400 hover:text-white'
+                                            }`}
+                                        >
+                                            {method === 'password'
+                                                ? <Lock className="w-3 h-3" />
+                                                : <Key className="w-3 h-3" />
+                                            }
+                                            {method === 'password' ? 'Password' : 'SSH Key'}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {form.authMethod === 'password' && (
+                                <div className="relative">
+                                    <label className="label text-xs">Password</label>
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={form.password}
+                                        onChange={(e) => update({ password: e.target.value })}
+                                        className="input text-sm py-2 pr-10"
                                         placeholder="••••••••"
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setShowPassphrase(!showPassphrase)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 bottom-2.5 text-slate-500 hover:text-white transition-colors"
                                     >
-                                        {showPassphrase ? (
-                                            <EyeOff className="w-5 h-5" />
-                                        ) : (
-                                            <Eye className="w-5 h-5" />
-                                        )}
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
                                 </div>
-                            </div>
-                        </>
-                    )}
-                </div>
+                            )}
 
-                {/* Tags */}
-                <div className="card p-6 space-y-4">
-                    <h2 className="font-medium">Tags</h2>
-
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    addTag();
-                                }
-                            }}
-                            className="input flex-1"
-                            placeholder="Add tag..."
-                        />
-                        <button
-                            type="button"
-                            onClick={addTag}
-                            className="btn btn-secondary"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </button>
-                    </div>
-
-                    {formData.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                            {formData.tags.map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-700 text-sm"
-                                >
-                                    {tag}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeTag(tag)}
-                                        className="text-dark-400 hover:text-red-400"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            ))}
+                            {form.authMethod === 'key' && (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="label text-xs">Private Key</label>
+                                        <textarea
+                                            value={form.privateKey}
+                                            onChange={(e) => update({ privateKey: e.target.value })}
+                                            className="input text-xs py-2 font-mono min-h-[110px] resize-none leading-relaxed"
+                                            placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"}
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <label className="label text-xs">
+                                            Passphrase <span className="text-slate-600">(if encrypted)</span>
+                                        </label>
+                                        <input
+                                            type={showPassphrase ? 'text' : 'password'}
+                                            value={form.passphrase}
+                                            onChange={(e) => update({ passphrase: e.target.value })}
+                                            className="input text-sm py-2 pr-10"
+                                            placeholder="••••••••"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassphrase(!showPassphrase)}
+                                            className="absolute right-3 bottom-2.5 text-slate-500 hover:text-white transition-colors"
+                                        >
+                                            {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                {/* Notes */}
-                <div className="card p-6">
-                    <label htmlFor="notes" className="label">
-                        Notes
-                        <span className="text-dark-500 ml-1">(optional)</span>
-                    </label>
-                    <textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="input min-h-[100px]"
-                        placeholder="Additional notes about this server..."
-                    />
-                </div>
+                        {/* Advanced — collapsible */}
+                        <div className="card overflow-visible">
+                            <button
+                                type="button"
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className="w-full flex items-center justify-between p-4 hover:bg-slate-700/20 transition-colors"
+                            >
+                                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                    Advanced
+                                </span>
+                                {showAdvanced
+                                    ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                                    : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                                }
+                            </button>
 
-                {/* Error */}
-                {error && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                        {error}
+                            {showAdvanced && (
+                                <div className="px-4 pb-4 border-t border-slate-700/50 space-y-3 pt-3">
+                                    <div>
+                                        <label className="label text-xs">Description</label>
+                                        <input
+                                            type="text"
+                                            value={form.description}
+                                            onChange={(e) => update({ description: e.target.value })}
+                                            className="input text-sm py-2"
+                                            placeholder="Production web server"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="label text-xs">Tags</label>
+                                        <div className="flex gap-2 mb-2">
+                                            <input
+                                                type="text"
+                                                value={tagInput}
+                                                onChange={(e) => setTagInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') { e.preventDefault(); addTag(); }
+                                                }}
+                                                className="input text-sm py-2 flex-1"
+                                                placeholder="production, linux, aws…"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={addTag}
+                                                className="btn btn-secondary btn-sm px-3"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                        {form.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {form.tags.map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 text-xs"
+                                                    >
+                                                        {tag}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => update({ tags: form.tags.filter((t) => t !== tag) })}
+                                                            className="text-slate-500 hover:text-red-400 transition-colors"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="label text-xs">Notes</label>
+                                        <textarea
+                                            value={form.notes}
+                                            onChange={(e) => update({ notes: e.target.value })}
+                                            className="input text-sm py-2 min-h-[72px] resize-none"
+                                            placeholder="Additional notes…"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                )}
 
-                {/* Actions */}
-                <div className="flex gap-3">
-                    <Link href="/dashboard" className="btn btn-secondary">
-                        Cancel
-                    </Link>
-                    <button type="submit" disabled={loading} className="btn btn-primary flex-1">
-                        {loading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            'Create Server'
+                    {/* ── RIGHT: Preview + Test + Actions ── */}
+                    <div className="lg:col-span-2 space-y-3 lg:sticky lg:top-4 self-start">
+
+                        {/* Live preview card */}
+                        <div className="card p-4">
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Preview</p>
+                            <div className="bg-slate-900/60 rounded-lg p-3.5 border border-slate-700/60">
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-2 rounded-lg border shrink-0 ${colors.pill}`}>
+                                        <ProtoIcon className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-sm truncate">
+                                            {form.name || (
+                                                <span className="text-slate-500 font-normal italic">Untitled Server</span>
+                                            )}
+                                        </p>
+                                        {form.description && (
+                                            <p className="text-[11px] text-slate-400 truncate mt-0.5">{form.description}</p>
+                                        )}
+                                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${colors.badge}`}>
+                                                {form.protocol}
+                                            </span>
+                                            {selectedGroup && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700 text-slate-300">
+                                                    {selectedGroup.name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {(form.host || form.username) && (
+                                    <div className="mt-3 pt-3 border-t border-slate-700/60 space-y-1.5">
+                                        {form.host && (
+                                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                <Globe className="w-3 h-3 shrink-0 text-slate-500" />
+                                                <span className="font-mono truncate text-slate-300">
+                                                    {form.host}:{form.port}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {form.username && (
+                                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                {form.authMethod === 'key'
+                                                    ? <Key className="w-3 h-3 shrink-0 text-slate-500" />
+                                                    : <Lock className="w-3 h-3 shrink-0 text-slate-500" />
+                                                }
+                                                <span className="font-mono truncate text-slate-300">{form.username}</span>
+                                                <span className="text-slate-600 text-[10px]">
+                                                    ({form.authMethod === 'key' ? 'key' : 'password'})
+                                                </span>
+                                            </div>
+                                        )}
+                                        {form.tags.length > 0 && (
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <Tag className="w-3 h-3 text-slate-600 shrink-0" />
+                                                {form.tags.map((t) => (
+                                                    <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-400">
+                                                        {t}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Test connection */}
+                        <div className="card p-4">
+                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">Connectivity</p>
+
+                            <button
+                                type="button"
+                                onClick={handleTest}
+                                disabled={!canTest || testStatus === 'testing'}
+                                className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                                    !canTest
+                                        ? 'border-slate-700 text-slate-600 cursor-not-allowed bg-transparent'
+                                        : testStatus === 'success'
+                                            ? 'border-green-500/40 bg-green-500/10 text-green-400 hover:bg-green-500/15'
+                                            : testStatus === 'failed'
+                                                ? 'border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/15'
+                                                : 'border-sky-500/30 bg-sky-500/8 text-sky-400 hover:bg-sky-500/15'
+                                }`}
+                            >
+                                {testStatus === 'testing' ? (
+                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Testing…</>
+                                ) : testStatus === 'success' ? (
+                                    <><CheckCircle2 className="w-3.5 h-3.5" /> Test Again</>
+                                ) : testStatus === 'failed' ? (
+                                    <><AlertCircle className="w-3.5 h-3.5" /> Retry Test</>
+                                ) : (
+                                    <><Activity className="w-3.5 h-3.5" /> Test Connection</>
+                                )}
+                            </button>
+
+                            {!canTest && (
+                                <p className="text-[11px] text-slate-600 mt-2 text-center">
+                                    Enter host, port &amp; username first
+                                </p>
+                            )}
+
+                            {testStatus === 'success' && testResult?.latency !== undefined && (
+                                <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-lg bg-green-500/8 border border-green-500/20">
+                                    <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-medium text-green-400">Port reachable</p>
+                                        <p className="text-[11px] text-green-500/60">Latency: {testResult.latency}ms</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {testStatus === 'failed' && testResult?.error && (
+                                <div className="mt-3 flex items-start gap-2.5 p-2.5 rounded-lg bg-red-500/8 border border-red-500/20">
+                                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs font-medium text-red-400">Unreachable</p>
+                                        <p className="text-[11px] text-red-400/60 break-words">{testResult.error}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Error */}
+                        {error && (
+                            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                {error}
+                            </div>
                         )}
-                    </button>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn btn-primary w-full"
+                            >
+                                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {loading ? 'Creating…' : 'Create Server'}
+                            </button>
+                            <Link href="/dashboard" className="btn btn-secondary w-full justify-center">
+                                Cancel
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>

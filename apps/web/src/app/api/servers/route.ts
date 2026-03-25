@@ -16,7 +16,7 @@ import {
     errorResponse,
     unauthorizedResponse,
 } from '@/lib/api';
-import { Protocol } from '@prisma/client';
+import { Protocol } from '@/app/generated/prisma/client';
 
 const createServerSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100),

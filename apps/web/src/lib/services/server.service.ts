@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import { Protocol } from '@prisma/client';
+import { Protocol } from '@/app/generated/prisma/client';
 import {
     encryptCredentials,
     decryptCredentials,

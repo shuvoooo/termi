@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -9,12 +9,11 @@ import {
     Maximize2,
     Minimize2,
     RotateCcw,
-    Upload,
-    Download,
+    FolderOpen,
     X,
 } from 'lucide-react';
+import FileManagerPanel from '@/components/scp/FileManagerPanel';
 
-// Dynamically import SSHTerminal to avoid SSR issues with xterm
 const SSHTerminal = dynamic(
     () => import('@/components/terminal/SSHTerminal'),
     { ssr: false }
@@ -36,14 +35,19 @@ export default function SSHConnectionPage() {
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showKeyboard, setShowKeyboard] = useState(false);
+    const [showFiles, setShowFiles] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const terminalKeyHandler = useRef<((key: string) => void) | null>(null);
 
+    const handleDisconnect = useCallback(() => {}, []);
+    const handleError = useCallback((err: string) => {
+        console.error('Terminal error:', err);
+    }, []);
+
     useEffect(() => {
         async function initConnection() {
             try {
-                // Fetch server details
                 const serverResponse = await fetch(`/api/servers/${serverId}`);
                 const serverData = await serverResponse.json();
 
@@ -55,14 +59,10 @@ export default function SSHConnectionPage() {
 
                 setServer(serverData.data.server);
 
-                // Get connection token
                 const tokenResponse = await fetch(`/api/connection/token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        serverId,
-                        protocol: 'ssh',
-                    }),
+                    body: JSON.stringify({ serverId, protocol: 'ssh' }),
                 });
 
                 const tokenData = await tokenResponse.json();
@@ -95,7 +95,6 @@ export default function SSHConnectionPage() {
         }
     };
 
-    // Detect mobile
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     if (loading) {
@@ -119,19 +118,29 @@ export default function SSHConnectionPage() {
 
     return (
         <div ref={containerRef} className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)]">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                    <Link href="/dashboard" className="btn btn-ghost btn-icon">
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                    <Link href="/dashboard" className="btn btn-ghost btn-icon shrink-0">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <div>
-                        <h1 className="font-medium">{server?.name}</h1>
+                    <div className="min-w-0">
+                        <h1 className="font-medium truncate">{server?.name}</h1>
                         <span className="text-sm text-dark-400">SSH Terminal</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Files toggle */}
+                    <button
+                        onClick={() => setShowFiles(f => !f)}
+                        className={`btn btn-sm gap-1.5 ${showFiles ? 'btn-primary' : 'btn-ghost'}`}
+                        title={showFiles ? 'Hide file manager' : 'Open file manager'}
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        <span className="hidden sm:inline text-xs">Files</span>
+                    </button>
+
                     <button
                         onClick={() => window.location.reload()}
                         className="btn btn-ghost btn-icon"
@@ -139,17 +148,15 @@ export default function SSHConnectionPage() {
                     >
                         <RotateCcw className="w-4 h-4" />
                     </button>
+
                     <button
                         onClick={toggleFullscreen}
                         className="btn btn-ghost btn-icon hidden sm:flex"
                         title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                     >
-                        {isFullscreen ? (
-                            <Minimize2 className="w-4 h-4" />
-                        ) : (
-                            <Maximize2 className="w-4 h-4" />
-                        )}
+                        {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </button>
+
                     {isMobile && (
                         <button
                             onClick={() => setShowKeyboard(!showKeyboard)}
@@ -158,6 +165,7 @@ export default function SSHConnectionPage() {
                             ⌨️
                         </button>
                     )}
+
                     <button
                         onClick={() => router.push('/dashboard')}
                         className="btn btn-ghost btn-icon text-red-400 hover:text-red-300"
@@ -168,27 +176,44 @@ export default function SSHConnectionPage() {
                 </div>
             </div>
 
-            {/* Terminal */}
-            <div className={`flex-1 min-h-0 ${showKeyboard ? 'pb-32' : ''}`}>
-                <SSHTerminal
-                    serverId={serverId}
-                    connectionToken={connectionToken}
-                    onDisconnect={() => {
-                        // Could show reconnect dialog
-                    }}
-                    onError={(err) => {
-                        console.error('Terminal error:', err);
-                    }}
-                />
+            {/* ── Main area: terminal + optional file panel ── */}
+            <div className="flex flex-1 min-h-0 gap-3">
+                {/* Terminal */}
+                <div className={`flex-1 min-w-0 min-h-0 ${showKeyboard ? 'pb-32' : ''}`}>
+                    <SSHTerminal
+                        serverId={serverId}
+                        connectionToken={connectionToken}
+                        onDisconnect={handleDisconnect}
+                        onError={handleError}
+                        onKeyHandlerReady={(handler) => { terminalKeyHandler.current = handler; }}
+                    />
+                </div>
+
+                {/* File manager panel — desktop: side panel | mobile: full overlay */}
+                {showFiles && (
+                    <>
+                        {/* Desktop side panel */}
+                        <div className="hidden md:flex w-80 lg:w-96 shrink-0 flex-col rounded-xl border border-slate-700 overflow-hidden">
+                            <FileManagerPanel
+                                serverId={serverId}
+                                onClose={() => setShowFiles(false)}
+                            />
+                        </div>
+
+                        {/* Mobile full overlay */}
+                        <div className="md:hidden absolute inset-0 z-20 rounded-xl overflow-hidden border border-slate-700">
+                            <FileManagerPanel
+                                serverId={serverId}
+                                onClose={() => setShowFiles(false)}
+                            />
+                        </div>
+                    </>
+                )}
             </div>
 
-            {/* Mobile Keyboard */}
+            {/* Mobile keyboard */}
             {isMobile && showKeyboard && (
-                <VirtualKeyboard
-                    onKey={(key) => {
-                        terminalKeyHandler.current?.(key);
-                    }}
-                />
+                <VirtualKeyboard onKey={(key) => { terminalKeyHandler.current?.(key); }} />
             )}
         </div>
     );

@@ -18,7 +18,7 @@ import {
     unauthorizedResponse,
     notFoundResponse,
 } from '@/lib/api';
-import { Protocol } from '@prisma/client';
+import { Protocol } from '@/app/generated/prisma/client';
 
 const updateServerSchema = z.object({
     name: z.string().min(1).max(100).optional(),

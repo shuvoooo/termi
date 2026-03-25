@@ -12,6 +12,7 @@ interface SSHTerminalProps {
     connectionToken: string;
     onDisconnect?: () => void;
     onError?: (error: string) => void;
+    onKeyHandlerReady?: (handler: (key: string) => void) => void;
 }
 
 export default function SSHTerminal({
@@ -19,6 +20,7 @@ export default function SSHTerminal({
     connectionToken,
     onDisconnect,
     onError,
+    onKeyHandlerReady,
 }: SSHTerminalProps) {
     const terminalRef = useRef<HTMLDivElement>(null);
     const terminalInstance = useRef<Terminal | null>(null);
@@ -63,8 +65,9 @@ export default function SSHTerminal({
                     case 'data':
                         // Decode base64 data and write to terminal
                         if (terminalInstance.current && message.data) {
-                            const data = atob(message.data);
-                            terminalInstance.current.write(data);
+                            const binary = atob(message.data);
+                            const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+                            terminalInstance.current.write(bytes);
                         }
                         break;
                     case 'closed':
@@ -152,12 +155,17 @@ export default function SSHTerminal({
         // Handle input
         terminal.onData((data) => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
+                const bytes = new TextEncoder().encode(data);
+                const encoded = btoa(String.fromCharCode(...bytes));
                 wsRef.current.send(JSON.stringify({
                     type: 'data',
-                    data: btoa(data),
+                    data: encoded,
                 }));
             }
         });
+
+        // Expose key handler for virtual keyboard
+        onKeyHandlerReady?.((key) => terminal.input(key));
 
         // Handle resize
         const handleResize = () => {

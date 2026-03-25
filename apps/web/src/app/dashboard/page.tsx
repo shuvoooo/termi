@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
     Server,
@@ -30,6 +30,16 @@ interface ServerItem {
     } | null;
 }
 
+interface ServerMetrics {
+    reachable: boolean;
+    latencyMs?: number;
+    cpu?: number;
+    ram?: { usedBytes: number; totalBytes: number; percent: number };
+    disk?: { usedBytes: number; totalBytes: number; percent: number };
+    network?: { rxBytes: number; txBytes: number };
+    error?: string;
+}
+
 const protocolIcons = {
     SSH: Terminal,
     SCP: FolderOpen,
@@ -44,11 +54,54 @@ const protocolColors = {
     VNC: 'protocol-vnc',
 };
 
+function formatBytes(bytes: number): string {
+    if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)}G`;
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)}M`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}K`;
+    return `${bytes}B`;
+}
+
+function MetricBar({ label, percent, value }: { label: string; percent: number; value: string }) {
+    const color =
+        percent >= 90 ? 'bg-red-500' :
+        percent >= 70 ? 'bg-yellow-500' :
+        'bg-green-500';
+
+    return (
+        <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] text-dark-400 w-7 shrink-0">{label}</span>
+            <div className="flex-1 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full transition-all duration-500 ${color}`}
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                />
+            </div>
+            <span className="text-[10px] text-dark-300 w-8 text-right shrink-0">{value}</span>
+        </div>
+    );
+}
+
+function StatusDot({ metrics, loading }: { metrics: ServerMetrics | null; loading: boolean }) {
+    if (loading) {
+        return <span className="w-2 h-2 rounded-full bg-dark-500 animate-pulse" title="Checking..." />;
+    }
+    if (!metrics) return null;
+
+    if (!metrics.reachable) {
+        return <span className="w-2 h-2 rounded-full bg-red-500" title="Offline" />;
+    }
+
+    const label = metrics.latencyMs != null ? `Online · ${metrics.latencyMs}ms` : 'Online';
+    return <span className="w-2 h-2 rounded-full bg-green-500" title={label} />;
+}
+
 export default function DashboardPage() {
     const [servers, setServers] = useState<ServerItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'favorites'>('all');
+    const [metrics, setMetrics] = useState<Record<string, ServerMetrics | null>>({});
+    const [metricsLoading, setMetricsLoading] = useState<Record<string, boolean>>({});
 
     const fetchServers = async () => {
         setLoading(true);
@@ -70,9 +123,50 @@ export default function DashboardPage() {
         }
     };
 
+    const fetchMetrics = useCallback(async (serverList: ServerItem[]) => {
+        if (serverList.length === 0) return;
+
+        // Mark all as loading
+        const loadingState: Record<string, boolean> = {};
+        serverList.forEach((s) => { loadingState[s.id] = true; });
+        setMetricsLoading(loadingState);
+
+        // Fetch in parallel, staggered slightly to avoid hammering
+        await Promise.all(
+            serverList.map(async (server, i) => {
+                await new Promise((r) => setTimeout(r, i * 100));
+                try {
+                    const res = await fetch(`/api/servers/${server.id}/metrics`);
+                    const data = await res.json();
+                    if (data.success) {
+                        setMetrics((prev) => ({ ...prev, [server.id]: data.data.metrics }));
+                    }
+                } catch {
+                    setMetrics((prev) => ({ ...prev, [server.id]: null }));
+                } finally {
+                    setMetricsLoading((prev) => ({ ...prev, [server.id]: false }));
+                }
+            })
+        );
+    }, []);
+
     useEffect(() => {
         fetchServers();
     }, [searchQuery, filter]);
+
+    // Fetch metrics whenever server list changes
+    useEffect(() => {
+        if (!loading && servers.length > 0) {
+            fetchMetrics(servers);
+        }
+    }, [loading, servers, fetchMetrics]);
+
+    // Auto-refresh metrics every 30 s
+    useEffect(() => {
+        if (servers.length === 0) return;
+        const interval = setInterval(() => fetchMetrics(servers), 30_000);
+        return () => clearInterval(interval);
+    }, [servers, fetchMetrics]);
 
     const toggleFavorite = async (serverId: string) => {
         try {
@@ -183,9 +277,12 @@ export default function DashboardPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {servers.map((server) => {
                         const Icon = protocolIcons[server.protocol];
+                        const m = metrics[server.id] ?? null;
+                        const mLoading = metricsLoading[server.id] ?? false;
+
                         return (
-                            <div key={server.id} className="card card-hover group">
-                                <div className="p-4">
+                            <div key={server.id} className="card card-hover group flex flex-col">
+                                <div className="p-4 flex-1">
                                     <div className="flex items-start gap-3">
                                         <div
                                             className={`w-10 h-10 rounded-lg flex items-center justify-center ${protocolColors[server.protocol]}`}
@@ -195,9 +292,10 @@ export default function DashboardPage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-medium truncate">{server.name}</h3>
+                                                <StatusDot metrics={m} loading={mLoading} />
                                                 <button
                                                     onClick={() => toggleFavorite(server.id)}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
                                                 >
                                                     {server.isFavorite ? (
                                                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
@@ -217,9 +315,7 @@ export default function DashboardPage() {
 
                                     {/* Tags & Group */}
                                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                                        <span
-                                            className={`badge ${protocolColors[server.protocol]}`}
-                                        >
+                                        <span className={`badge ${protocolColors[server.protocol]}`}>
                                             {server.protocol}
                                         </span>
                                         {server.group && (
@@ -234,14 +330,57 @@ export default function DashboardPage() {
                                             </span>
                                         )}
                                         {server.tags.slice(0, 2).map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="badge bg-dark-700 text-dark-300"
-                                            >
+                                            <span key={tag} className="badge bg-dark-700 text-dark-300">
                                                 {tag}
                                             </span>
                                         ))}
+                                        {m && m.reachable && m.latencyMs != null && (
+                                            <span className="badge bg-dark-700 text-dark-300 ml-auto">
+                                                {m.latencyMs}ms
+                                            </span>
+                                        )}
                                     </div>
+
+                                    {/* Metrics — SSH only */}
+                                    {server.protocol === 'SSH' && m && m.reachable && !m.error && (
+                                        <div className="mt-3 space-y-1.5">
+                                            {m.cpu != null && (
+                                                <MetricBar
+                                                    label="CPU"
+                                                    percent={m.cpu}
+                                                    value={`${m.cpu}%`}
+                                                />
+                                            )}
+                                            {m.ram && (
+                                                <MetricBar
+                                                    label="RAM"
+                                                    percent={m.ram.percent}
+                                                    value={`${formatBytes(m.ram.usedBytes)}`}
+                                                />
+                                            )}
+                                            {m.disk && (
+                                                <MetricBar
+                                                    label="Disk"
+                                                    percent={m.disk.percent}
+                                                    value={`${m.disk.percent}%`}
+                                                />
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* SSH metric error hint */}
+                                    {server.protocol === 'SSH' && m && m.reachable && m.error && (
+                                        <p className="mt-2 text-[10px] text-dark-500 truncate" title={m.error}>
+                                            Metrics unavailable
+                                        </p>
+                                    )}
+
+                                    {/* Non-SSH reachable but no metrics */}
+                                    {server.protocol !== 'SSH' && m && m.reachable && (
+                                        <p className="mt-2 text-[10px] text-dark-500">
+                                            Metrics require SSH
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Connect Button */}
