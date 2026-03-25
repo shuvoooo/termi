@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     Server,
     Terminal,
@@ -13,7 +14,9 @@ import {
     MoreVertical,
     Search,
     RefreshCw,
+    Layers,
 } from 'lucide-react';
+import { useSessionsContext } from './sessions-context';
 
 interface ServerItem {
     id: string;
@@ -96,6 +99,8 @@ function StatusDot({ metrics, loading }: { metrics: ServerMetrics | null; loadin
 }
 
 export default function DashboardPage() {
+    const router = useRouter();
+    const { addSession, sessions } = useSessionsContext();
     const [servers, setServers] = useState<ServerItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -192,6 +197,12 @@ export default function DashboardPage() {
     const getConnectUrl = (server: ServerItem) => {
         const protocol = server.protocol.toLowerCase();
         return `/dashboard/connect/${server.id}/${protocol}`;
+    };
+
+    const openInSessions = async (server: ServerItem) => {
+        const alreadyOpen = sessions.some(s => s.serverId === server.id);
+        if (!alreadyOpen) await addSession(server.id, server.name);
+        router.push('/dashboard/sessions');
     };
 
     return (
@@ -383,14 +394,23 @@ export default function DashboardPage() {
                                     )}
                                 </div>
 
-                                {/* Connect Button */}
-                                <div className="px-4 py-3 border-t border-dark-700 bg-dark-900/50">
+                                {/* Connect Button(s) */}
+                                <div className="px-4 py-3 border-t border-dark-700 bg-dark-900/50 flex gap-2">
                                     <Link
                                         href={getConnectUrl(server)}
-                                        className="btn btn-primary w-full justify-center text-sm"
+                                        className="btn btn-primary flex-1 justify-center text-sm"
                                     >
                                         Connect
                                     </Link>
+                                    {server.protocol === 'SSH' && (
+                                        <button
+                                            onClick={() => openInSessions(server)}
+                                            className="btn btn-secondary btn-icon shrink-0"
+                                            title="Open in Sessions tab"
+                                        >
+                                            <Layers className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

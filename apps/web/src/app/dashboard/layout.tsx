@@ -16,6 +16,8 @@ import {
     Shield,
     Monitor,
 } from 'lucide-react';
+import { SessionsProvider } from './sessions-context';
+import SessionsWorkspace from './sessions-workspace';
 
 interface User {
     id: string;
@@ -31,28 +33,22 @@ const navigation = [
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
-export default function DashboardLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+// Inner layout — can access SessionsContext if needed in the future
+function LayoutInner({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    const isSessionsPage = pathname === '/dashboard/sessions';
+
     useEffect(() => {
         async function fetchUser() {
             try {
                 const response = await fetch('/api/auth/me');
                 const data = await response.json();
-
-                if (!data.success) {
-                    router.push('/login');
-                    return;
-                }
-
+                if (!data.success) { router.push('/login'); return; }
                 setUser(data.data.user);
             } catch {
                 router.push('/login');
@@ -60,9 +56,16 @@ export default function DashboardLayout({
                 setLoading(false);
             }
         }
-
         fetchUser();
     }, [router]);
+
+    // When navigating back to sessions page, trigger xterm refit
+    useEffect(() => {
+        if (isSessionsPage) {
+            const t = setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+            return () => clearTimeout(t);
+        }
+    }, [isSessionsPage]);
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -77,9 +80,7 @@ export default function DashboardLayout({
         );
     }
 
-    if (!user) {
-        return null;
-    }
+    if (!user) return null;
 
     return (
         <div className="min-h-screen bg-dark-950">
@@ -93,8 +94,9 @@ export default function DashboardLayout({
 
             {/* Sidebar */}
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-64 bg-dark-900 border-r border-dark-800 z-50 transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
+                className={`fixed top-0 left-0 bottom-0 w-64 bg-dark-900 border-r border-dark-800 z-50 transform transition-transform duration-200 lg:translate-x-0 ${
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
             >
                 <div className="flex flex-col h-full">
                     {/* Logo */}
@@ -127,10 +129,7 @@ export default function DashboardLayout({
 
                     {/* Quick Add */}
                     <div className="px-4 mb-4">
-                        <Link
-                            href="/dashboard/servers/new"
-                            className="btn btn-primary w-full justify-center"
-                        >
+                        <Link href="/dashboard/servers/new" className="btn btn-primary w-full justify-center">
                             <Plus className="w-4 h-4" />
                             Add Server
                         </Link>
@@ -147,10 +146,11 @@ export default function DashboardLayout({
                                     key={item.name}
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        isActive
                                             ? 'bg-primary-500/20 text-primary-400'
                                             : 'text-dark-300 hover:bg-dark-800 hover:text-white'
-                                        }`}
+                                    }`}
                                 >
                                     <item.icon className="w-5 h-5" />
                                     {item.name}
@@ -190,13 +190,10 @@ export default function DashboardLayout({
 
             {/* Main content */}
             <div className="lg:pl-64">
-                {/* Top bar */}
+                {/* Top bar (mobile) */}
                 <header className="sticky top-0 z-30 h-16 bg-dark-900/80 backdrop-blur-lg border-b border-dark-800 lg:hidden">
                     <div className="flex items-center justify-between h-full px-4">
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="p-2 text-dark-400 hover:text-white"
-                        >
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 text-dark-400 hover:text-white">
                             <Menu className="w-6 h-6" />
                         </button>
                         <Link href="/dashboard" className="flex items-center gap-2">
@@ -207,9 +204,27 @@ export default function DashboardLayout({
                     </div>
                 </header>
 
-                {/* Page content */}
-                <main className="p-4 lg:p-8">{children}</main>
+                {/* Sessions workspace — always mounted so WebSocket connections persist.
+                    Hidden via CSS (not unmounted) when on other pages. */}
+                <div className={isSessionsPage ? '' : 'hidden'}>
+                    <main className="p-4 lg:p-8">
+                        <SessionsWorkspace />
+                    </main>
+                </div>
+
+                {/* Regular page content — hidden on sessions page */}
+                {!isSessionsPage && (
+                    <main className="p-4 lg:p-8">{children}</main>
+                )}
             </div>
         </div>
+    );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <SessionsProvider>
+            <LayoutInner>{children}</LayoutInner>
+        </SessionsProvider>
     );
 }
