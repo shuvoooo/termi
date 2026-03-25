@@ -179,6 +179,12 @@ export function getSSHMetrics(
             done({ reachable: true, error: `SSH error: ${err.message}` });
         });
 
+        if (config.password) {
+            client.on('keyboard-interactive', (_name, _instructions, _lang, _prompts, finish) => {
+                finish([config.password!]);
+            });
+        }
+
         const connectConfig: ConnectConfig = {
             host: config.host,
             port: config.port,
@@ -186,11 +192,14 @@ export function getSSHMetrics(
             readyTimeout: timeoutMs,
         };
 
-        if (config.privateKey) {
+        if (config.privateKey?.trim()) {
             connectConfig.privateKey = config.privateKey;
-            if (config.passphrase) connectConfig.passphrase = config.passphrase;
-        } else if (config.password) {
+            if (config.passphrase?.trim()) connectConfig.passphrase = config.passphrase;
+        }
+
+        if (config.password?.trim()) {
             connectConfig.password = config.password;
+            connectConfig.tryKeyboard = true;
         }
 
         client.connect(connectConfig);

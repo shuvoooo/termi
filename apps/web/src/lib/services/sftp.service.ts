@@ -62,6 +62,15 @@ function openSFTP(config: SFTPConfig, timeoutMs = 15000): Promise<OpenedSFTP> {
             reject(err);
         });
 
+        // Many servers (Ubuntu/Debian default sshd) advertise keyboard-interactive
+        // instead of plain password auth. Handling this event makes the password
+        // work transparently regardless of which method the server prefers.
+        if (config.password) {
+            client.on('keyboard-interactive', (_name, _instructions, _lang, _prompts, finish) => {
+                finish([config.password!]);
+            });
+        }
+
         const cc: ConnectConfig = {
             host: config.host,
             port: config.port,
@@ -69,11 +78,18 @@ function openSFTP(config: SFTPConfig, timeoutMs = 15000): Promise<OpenedSFTP> {
             readyTimeout: timeoutMs,
         };
 
-        if (config.privateKey) {
+        // Set key auth if private key is present (non-empty string)
+        if (config.privateKey?.trim()) {
             cc.privateKey = config.privateKey;
-            if (config.passphrase) cc.passphrase = config.passphrase;
-        } else if (config.password) {
+            if (config.passphrase?.trim()) cc.passphrase = config.passphrase;
+        }
+
+        // Set password auth if password is present.
+        // Also enable tryKeyboard so ssh2 attempts keyboard-interactive,
+        // which is handled by the event listener above.
+        if (config.password?.trim()) {
             cc.password = config.password;
+            cc.tryKeyboard = true;
         }
 
         client.connect(cc);
