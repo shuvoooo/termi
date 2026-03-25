@@ -13,7 +13,7 @@ import {
 // TYPES
 // ============================================================================
 
-interface RemoteEntry {
+export interface RemoteEntry {
     name: string;
     path: string;
     type: 'file' | 'dir' | 'symlink' | 'other';
@@ -38,6 +38,8 @@ export interface FileManagerPanelProps {
     onClose?: () => void;
     /** Show as a full-page layout (standalone SCP page) instead of a panel */
     fullPage?: boolean;
+    /** Called whenever selected entries or current path changes (for transfer mode) */
+    onSelectionChange?: (selected: RemoteEntry[], currentPath: string) => void;
 }
 
 // ============================================================================
@@ -120,7 +122,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 // COMPONENT
 // ============================================================================
 
-export default function FileManagerPanel({ serverId, onClose, fullPage = false }: FileManagerPanelProps) {
+export default function FileManagerPanel({ serverId, onClose, fullPage = false, onSelectionChange }: FileManagerPanelProps) {
     const [currentPath, setCurrentPath] = useState('/');
     const [entries, setEntries] = useState<RemoteEntry[]>([]);
     const [loading, setLoading] = useState(false);
@@ -168,6 +170,15 @@ export default function FileManagerPanel({ serverId, onClose, fullPage = false }
     }, [serverId]);
 
     useEffect(() => { loadDir('/'); }, [loadDir]);
+
+    // Notify parent (transfer mode) whenever selection or path changes
+    useEffect(() => {
+        if (!onSelectionChange) return;
+        onSelectionChange(
+            entries.filter(e => selected.has(e.path)),
+            currentPath
+        );
+    }, [selected, currentPath, entries, onSelectionChange]);
 
     // ── Visible entries ────────────────────────────────────────────────────
 

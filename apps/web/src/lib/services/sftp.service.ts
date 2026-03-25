@@ -248,6 +248,54 @@ export function createDownloadStream(config: SFTPConfig, filePath: string): Read
 }
 
 // ============================================================================
+// SERVER-TO-SERVER TRANSFER (pipes directly between two SFTP connections)
+// ============================================================================
+
+export interface TransferResult {
+    ok: string[];
+    failed: { path: string; error: string }[];
+}
+
+export async function transferFiles(
+    from: SFTPConfig,
+    fromPaths: string[],
+    to: SFTPConfig,
+    toDir: string
+): Promise<TransferResult> {
+    const [fromConn, toConn] = await Promise.all([openSFTP(from), openSFTP(to)]);
+    const ok: string[] = [];
+    const failed: { path: string; error: string }[] = [];
+
+    try {
+        for (const srcPath of fromPaths) {
+            const fileName = srcPath.split('/').pop()!;
+            const destPath = toDir.replace(/\/+$/, '') + '/' + fileName;
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    const rs = fromConn.sftp.createReadStream(srcPath);
+                    const ws = toConn.sftp.createWriteStream(destPath);
+                    rs.on('error', reject);
+                    ws.on('error', reject);
+                    ws.on('close', resolve);
+                    rs.pipe(ws as NodeJS.WritableStream);
+                });
+                ok.push(srcPath);
+            } catch (err) {
+                failed.push({
+                    path: srcPath,
+                    error: err instanceof Error ? err.message : 'Transfer failed',
+                });
+            }
+        }
+    } finally {
+        fromConn.client.end();
+        toConn.client.end();
+    }
+
+    return { ok, failed };
+}
+
+// ============================================================================
 // UPLOAD
 // ============================================================================
 
