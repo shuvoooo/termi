@@ -29,6 +29,15 @@ export default function SSHTerminal({
     const statusRef = useRef<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
     const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
 
+    // Use refs for callbacks so that changing them doesn't cause the terminal
+    // to reconnect (they are always called via the ref, not the closure).
+    const onDisconnectRef = useRef(onDisconnect);
+    onDisconnectRef.current = onDisconnect;
+    const onErrorRef = useRef(onError);
+    onErrorRef.current = onError;
+    const onKeyHandlerReadyRef = useRef(onKeyHandlerReady);
+    onKeyHandlerReadyRef.current = onKeyHandlerReady;
+
     const updateStatus = useCallback((newStatus: typeof status) => {
         statusRef.current = newStatus;
         setStatus(newStatus);
@@ -46,6 +55,7 @@ export default function SSHTerminal({
         };
 
         ws.onmessage = (event) => {
+            if (wsRef.current !== ws) return; // Stale WebSocket
             try {
                 const message = JSON.parse(event.data);
 
@@ -74,12 +84,12 @@ export default function SSHTerminal({
                     case 'disconnected':
                         updateStatus('disconnected');
                         terminalInstance.current?.write('\r\n\x1b[33mConnection closed.\x1b[0m\r\n');
-                        onDisconnect?.();
+                        onDisconnectRef.current?.();
                         break;
                     case 'error':
                         updateStatus('error');
                         terminalInstance.current?.write(`\r\n\x1b[31mError: ${message.message}\x1b[0m\r\n`);
-                        onError?.(message.message);
+                        onErrorRef.current?.(message.message);
                         break;
                 }
             } catch (e) {
@@ -88,6 +98,8 @@ export default function SSHTerminal({
         };
 
         ws.onclose = () => {
+            // Ignore events from a stale WebSocket (e.g. from React StrictMode double-invoke cleanup)
+            if (wsRef.current !== ws) return;
             if (statusRef.current !== 'disconnected' && statusRef.current !== 'error') {
                 updateStatus('disconnected');
                 terminalInstance.current?.write('\r\n\x1b[33mConnection lost.\x1b[0m\r\n');
@@ -95,10 +107,13 @@ export default function SSHTerminal({
         };
 
         ws.onerror = () => {
+            // Ignore events from a stale WebSocket
+            if (wsRef.current !== ws) return;
             updateStatus('error');
-            onError?.('WebSocket connection failed');
+            onErrorRef.current?.('WebSocket connection failed');
         };
-    }, [serverId, connectionToken, onDisconnect, onError, updateStatus]);
+    // onDisconnect/onError intentionally omitted — accessed via refs to prevent reconnection loops
+    }, [serverId, connectionToken, updateStatus]);
 
     useEffect(() => {
         if (!terminalRef.current) return;
@@ -165,7 +180,7 @@ export default function SSHTerminal({
         });
 
         // Expose key handler for virtual keyboard
-        onKeyHandlerReady?.((key) => terminal.input(key));
+        onKeyHandlerReadyRef.current?.((key) => terminal.input(key));
 
         // Handle resize
         const handleResize = () => {
@@ -182,10 +197,13 @@ export default function SSHTerminal({
         terminal.write('Connecting to server...\r\n');
         connect();
 
-        // Cleanup
+        // Cleanup — null out wsRef so stale event handlers (e.g. from StrictMode
+        // double-invoke) can detect they belong to a closed connection and no-op.
         return () => {
             window.removeEventListener('resize', handleResize);
-            wsRef.current?.close();
+            const ws = wsRef.current;
+            wsRef.current = null;
+            ws?.close();
             terminal.dispose();
         };
     }, [connect]);

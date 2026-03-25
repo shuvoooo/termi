@@ -219,6 +219,31 @@ export default function SessionsPage() {
 
     // ── Session management ─────────────────────────────────────────────────
 
+    // Reconnect an existing session in-place (does not add a new tab)
+    const reconnectSession = useCallback(async (tabId: string, serverId: string) => {
+        setSessions(prev => prev.map(s =>
+            s.tabId === tabId ? { ...s, token: null, status: 'connecting' } : s
+        ));
+        try {
+            const res = await fetch('/api/connection/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ serverId, protocol: 'ssh' }),
+            });
+            const data = await res.json();
+            setSessions(prev => prev.map(s => {
+                if (s.tabId !== tabId) return s;
+                return data.success
+                    ? { ...s, token: data.data.token, status: 'connecting' }
+                    : { ...s, status: 'error' };
+            }));
+        } catch {
+            setSessions(prev => prev.map(s =>
+                s.tabId === tabId ? { ...s, status: 'error' } : s
+            ));
+        }
+    }, []);
+
     const addSession = useCallback(async (serverId: string, serverName?: string) => {
         const tabId = `${uid}-${Date.now()}`;
 
@@ -586,14 +611,7 @@ export default function SessionsPage() {
                                                     <span className="hidden sm:inline text-xs">Files</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        setSessions(prev => prev.map(s =>
-                                                            s.tabId === session.tabId
-                                                                ? { ...s, token: null, status: 'connecting' }
-                                                                : s
-                                                        ));
-                                                        addSession(session.serverId, session.serverName);
-                                                    }}
+                                                    onClick={() => reconnectSession(session.tabId, session.serverId)}
                                                     className="btn btn-ghost btn-icon btn-sm"
                                                     title="Reconnect"
                                                 >
@@ -618,7 +636,7 @@ export default function SessionsPage() {
                                                         <AlertCircle className="w-8 h-8 text-red-400" />
                                                         <p className="text-sm text-red-400">Failed to connect</p>
                                                         <button
-                                                            onClick={() => addSession(session.serverId, session.serverName)}
+                                                            onClick={() => reconnectSession(session.tabId, session.serverId)}
                                                             className="btn btn-secondary btn-sm gap-1.5"
                                                         >
                                                             <RotateCcw className="w-3.5 h-3.5" /> Retry
