@@ -105,7 +105,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                                 <Terminal className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-lg font-bold gradient-text">Termo</span>
+                            <span className="text-lg font-bold gradient-text">Termi</span>
                         </Link>
                         <button
                             onClick={() => setSidebarOpen(false)}
@@ -198,7 +198,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                         </button>
                         <Link href="/dashboard" className="flex items-center gap-2">
                             <Terminal className="w-6 h-6 text-primary-500" />
-                            <span className="font-bold">Termo</span>
+                            <span className="font-bold">Termi</span>
                         </Link>
                         <div className="w-10" />
                     </div>

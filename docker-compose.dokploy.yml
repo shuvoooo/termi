@@ -1,7 +1,7 @@
 services:
   guacd:
     image: guacamole/guacd:1.5.5
-    container_name: termo-guacd
+    container_name: termi-guacd
     restart: unless-stopped
     networks:
       - dokploy-network
@@ -9,8 +9,8 @@ services:
   web:
     build:
       context: .
-      dockerfile: docker/Dockerfile.web
-    container_name: termo-web
+      dockerfile: apps/web/Dockerfile
+    container_name: termi-web
     restart: unless-stopped
     environment:
       # Session & Encryption
@@ -46,8 +46,8 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: docker/Dockerfile.gateway
-    container_name: termo-gateway
+      dockerfile: apps/gateway/Dockerfile
+    container_name: termi-gateway
     restart: unless-stopped
     depends_on:
       - guacd

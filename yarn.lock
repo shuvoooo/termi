@@ -752,7 +752,7 @@
     postcss "^8.4.41"
     tailwindcss "4.1.18"
 
-"@termo/gateway@file:/Users/shuvo/Developments/MyPersonal/termi/apps/gateway":
+"@termi/gateway@file:/Users/shuvo/Developments/MyPersonal/termi/apps/gateway":
   version "1.0.0"
   resolved "file:apps/gateway"
   dependencies:
@@ -761,7 +761,7 @@
     ssh2 "^1.17.0"
     ws "^8.19.0"
 
-"@termo/web@file:/Users/shuvo/Developments/MyPersonal/termi/apps/web":
+"@termi/web@file:/Users/shuvo/Developments/MyPersonal/termi/apps/web":
   version "1.0.0"
   resolved "file:apps/web"
   dependencies:

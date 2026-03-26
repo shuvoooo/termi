@@ -89,7 +89,7 @@ export default function RegisterPage() {
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                             <Terminal className="w-7 h-7 text-white" />
                         </div>
-                        <span className="text-2xl font-bold gradient-text">Termo</span>
+                        <span className="text-2xl font-bold gradient-text">Termi</span>
                     </div>
 
                     <h1 className="text-2xl font-bold text-center mb-2">Create Account</h1>

@@ -13,7 +13,7 @@ import { generateSecureToken } from '@/lib/crypto';
 // CONSTANTS
 // ============================================================================
 
-const TOTP_ISSUER = 'Termo';
+const TOTP_ISSUER = 'Termi';
 const TOTP_ALGORITHM = 'SHA1';
 const TOTP_DIGITS = 6;
 const TOTP_PERIOD = 30;

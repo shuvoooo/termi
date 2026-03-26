@@ -1,4 +1,4 @@
-# Termo 🖥️
+# Termi 🖥️
 
 **Secure Server Management PWA** - SSH, SCP, RDP, and VNC from your browser.
 
@@ -9,7 +9,7 @@
 > **🎯 NEW: RDP Support is Ready!** For quick RDP setup, see [SOLUTION.md](SOLUTION.md) or run `node start-all.js`
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Termo Dashboard" width="800">
+  <img src="docs/screenshot.png" alt="Termi Dashboard" width="800">
 </p>
 
 ## ✨ Features
@@ -53,7 +53,7 @@
 
 1. **Start guacd daemon**
    ```powershell
-   docker run -d -p 4822:4822 --name termo-guacd guacamole/guacd:1.5.4
+   docker run -d -p 4822:4822 --name termi-guacd guacamole/guacd:1.5.4
    ```
 
 2. **Run the setup script**
@@ -78,8 +78,8 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/termo.git
-   cd termo
+   git clone https://github.com/yourusername/termi.git
+   cd termi
    ```
 
 2. **Configure environment**
@@ -104,7 +104,7 @@
    docker-compose exec web npx prisma migrate deploy
    ```
 
-5. **Access Termo**
+5. **Access Termi**
    
    Open http://localhost:3000 in your browser.
 
@@ -130,7 +130,7 @@ npm run dev:all
 ### Project Structure
 
 ```
-termo/
+termi/
 ├── apps/
 │   ├── web/                    # Next.js PWA
 │   │   ├── src/

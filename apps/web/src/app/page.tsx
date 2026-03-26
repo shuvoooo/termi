@@ -20,7 +20,7 @@ export default function HomePage() {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                                 <Terminal className="w-6 h-6 text-white" />
                             </div>
-                            <span className="text-xl font-bold gradient-text">Termo</span>
+                            <span className="text-xl font-bold gradient-text">Termi</span>
                         </div>
 
                         <nav className="hidden md:flex items-center gap-6">
@@ -202,7 +202,7 @@ export default function HomePage() {
                         Ready to Get Started?
                     </h2>
                     <p className="text-lg text-dark-300 mb-8">
-                        Deploy your own Termo instance in minutes with Docker.
+                        Deploy your own Termi instance in minutes with Docker.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -221,7 +221,7 @@ export default function HomePage() {
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <Terminal className="w-5 h-5 text-primary-500" />
-                        <span className="font-semibold">Termo</span>
+                        <span className="font-semibold">Termi</span>
                         <span className="text-dark-500">•</span>
                         <span className="text-dark-500 text-sm">MIT License</span>
                     </div>

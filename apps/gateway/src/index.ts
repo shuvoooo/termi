@@ -1,5 +1,5 @@
 /**
- * Termo WebSocket Gateway
+ * Termi WebSocket Gateway
  * 
  * This service handles WebSocket connections from the browser and proxies them
  * to the appropriate protocol handler (SSH, SCP, RDP, VNC).
@@ -278,6 +278,6 @@ process.on('SIGINT', shutdown);
 // ============================================================================
 
 server.listen(PORT, HOST, () => {
-    console.log(`🚀 Termo Gateway running at ws://${HOST}:${PORT}/connect`);
+    console.log(`🚀 Termi Gateway running at ws://${HOST}:${PORT}/connect`);
     console.log(`   Health check: http://${HOST}:${PORT}/health`);
 });

@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Termo - Secure Server Management',
+    title: 'Termi - Secure Server Management',
     description: 'Manage your servers securely via SSH, SCP, RDP, and VNC from your browser',
     manifest: '/manifest.json',
     icons: {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
         apple: '/icons/apple-touch-icon.png',
     },
     openGraph: {
-        title: 'Termo - Secure Server Management',
+        title: 'Termi - Secure Server Management',
         description: 'Manage your servers securely via SSH, SCP, RDP, and VNC from your browser',
         type: 'website',
     },

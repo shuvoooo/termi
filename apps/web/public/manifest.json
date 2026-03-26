@@ -1,6 +1,6 @@
 {
-    "name": "Termo",
-    "short_name": "Termo",
+    "name": "Termi",
+    "short_name": "Termi",
     "description": "Secure server management - SSH, SCP, RDP, VNC from your browser",
     "start_url": "/dashboard",
     "display": "standalone",

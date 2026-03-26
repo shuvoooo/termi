@@ -1,5 +1,5 @@
 /**
- * Termo Session Management
+ * Termi Session Management
  * 
  * Uses iron-session for secure, encrypted, cookie-based sessions.
  * Session data is encrypted and stored in an HTTP-only cookie.
@@ -50,7 +50,7 @@ function getSessionSecret(): string {
 
 export const sessionOptions: SessionOptions = {
     password: getSessionSecret(),
-    cookieName: 'termo_session',
+    cookieName: 'termi_session',
     cookieOptions: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,

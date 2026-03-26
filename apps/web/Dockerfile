@@ -1,4 +1,4 @@
-# Termo Web Application Dockerfile
+# Termi Web Application Dockerfile
 # Multi-stage build for production
 
 # Stage 1: Dependencies

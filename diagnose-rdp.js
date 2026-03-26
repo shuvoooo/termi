@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Termo RDP Diagnostic Tool
+ * Termi RDP Diagnostic Tool
  *
  * This script checks all components needed for RDP to work
  */
@@ -52,18 +52,18 @@ section('guacd Container');
 checks++;
 try {
     const containers = execSync('docker ps --format "{{.Names}}"', { encoding: 'utf8' });
-    if (containers.includes('termo-guacd')) {
+    if (containers.includes('termi-guacd')) {
         pass('guacd container is running');
 
         // Check container status
-        const inspect = execSync('docker inspect termo-guacd --format "{{.State.Status}}"', { encoding: 'utf8' }).trim();
+        const inspect = execSync('docker inspect termi-guacd --format "{{.State.Status}}"', { encoding: 'utf8' }).trim();
         if (inspect === 'running') {
             pass('guacd container status: running');
         } else {
-            fail(`guacd container status: ${inspect}`, 'Run: docker start termo-guacd');
+            fail(`guacd container status: ${inspect}`, 'Run: docker start termi-guacd');
         }
     } else {
-        fail('guacd container not found', 'Run: docker run -d -p 4822:4822 --name termo-guacd guacamole/guacd:1.5.4');
+        fail('guacd container not found', 'Run: docker run -d -p 4822:4822 --name termi-guacd guacamole/guacd:1.5.4');
     }
 } catch (err) {
     fail('Failed to check Docker containers', 'Ensure Docker is running');
@@ -89,7 +89,7 @@ new Promise((resolve) => {
     });
 
     socket.on('error', (err) => {
-        fail(`Port 4822 not accessible: ${err.message}`, 'Start guacd: docker run -d -p 4822:4822 --name termo-guacd guacamole/guacd:1.5.4');
+        fail(`Port 4822 not accessible: ${err.message}`, 'Start guacd: docker run -d -p 4822:4822 --name termi-guacd guacamole/guacd:1.5.4');
         resolve(false);
     });
 
@@ -127,7 +127,7 @@ new Promise((resolve) => {
             });
 
             socket.on('error', (err) => {
-                fail(`guacd protocol error: ${err.message}`, 'Check guacd logs: docker logs termo-guacd');
+                fail(`guacd protocol error: ${err.message}`, 'Check guacd logs: docker logs termi-guacd');
                 resolve(false);
             });
 
@@ -282,7 +282,7 @@ new Promise((resolve) => {
     } else {
         console.log(`\n✗ Found ${issuesFound} issue(s). Please fix them and run this diagnostic again.\n`);
         console.log('Quick start guide:');
-        console.log('1. Start guacd: docker run -d -p 4822:4822 --name termo-guacd guacamole/guacd:1.5.4');
+        console.log('1. Start guacd: docker run -d -p 4822:4822 --name termi-guacd guacamole/guacd:1.5.4');
         console.log('2. Start gateway: cd apps/gateway && npm run dev');
         console.log('3. Start web: cd apps/web && npm run dev\n');
         console.log('For detailed help, see RDP_SETUP_GUIDE.md\n');
