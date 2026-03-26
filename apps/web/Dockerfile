@@ -2,37 +2,49 @@
 # Multi-stage build for production
 
 # Stage 1: Dependencies
-# isntall "linux-musl-openssl-3.0.x".
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat openssh-client
+# Use Debian-based image so npm correctly installs glibc optional native binaries
+# (lightningcss, @tailwindcss/oxide). These packages are absent from the lockfile's
+# packages section because it was generated on macOS; npm install at the root level
+# (not workspace-scoped) triggers proper cross-platform optional dep resolution.
+FROM node:20-slim AS deps
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Copy package files
+# Copy ALL workspace package.json files so npm can resolve the full workspace graph
 COPY package.json package-lock.json* ./
 COPY apps/web/package.json ./apps/web/
+COPY apps/gateway/package.json ./apps/gateway/
 
-# Install dependencies
-RUN npm ci --workspace=apps/web
+# Install deps. Then explicitly install linux-arm64-gnu native packages that are absent
+# from the lockfile (generated on macOS); npm never adds them automatically.
+RUN npm install && \
+    LCSS_VER=$(node -p "require('./node_modules/lightningcss/package.json').version") && \
+    OXIDE_VER=$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version") && \
+    npm install --no-save \
+      "lightningcss-linux-arm64-gnu@${LCSS_VER}" \
+      "@tailwindcss/oxide-linux-arm64-gnu@${OXIDE_VER}"
 
 # Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 
 # Copy source code
 COPY . .
 
 # Generate Prisma client
-# Run prisma generate so the linux-musl engine is downloaded for the alpine runtime.
-# Ensure we have the prisma binary available in the builder stage.
 RUN npx prisma generate --schema=apps/web/prisma/schema.prisma
 
 # Build application
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Dummy secrets required by env validation at build time (page data collection).
+# These are NOT used at runtime — real secrets are injected via docker-compose env vars.
+ENV SESSION_SECRET=build-time-placeholder-not-used-in-runtime-x
+ENV ENCRYPTION_KEY=build-time-placeholder-not-used-in-runtime-x
+ENV GATEWAY_JWT_SECRET=build-time-placeholder-not-used-in-runtime
 
 RUN npm run build --workspace=apps/web
 

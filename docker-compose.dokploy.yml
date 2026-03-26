@@ -13,13 +13,30 @@ services:
     container_name: termi-web
     restart: unless-stopped
     environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-termi}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-termi}
+
       # Session & Encryption
       SESSION_SECRET: ${SESSION_SECRET:-change-this-to-a-long-random-string}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-generate-with-openssl-rand-base64-32}
 
       # Gateway
       GATEWAY_JWT_SECRET: ${GATEWAY_JWT_SECRET:-gateway-secret-change-this}
-      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_URL:-wss://gateway.example.com}
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-wss://gateway.example.com}
+
+      # App URL
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://example.com}
+
+      # Email (SMTP) — optional, logs to console if not set
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+
+      # Security
+      ALLOW_PRIVATE_NETWORKS: ${ALLOW_PRIVATE_NETWORKS:-false}
 
       # Other
       NODE_ENV: production

@@ -36,7 +36,7 @@ const passkeyResponseSchema = z.object({
         userHandle: z.string().optional().nullable(),
     }),
     type: z.literal('public-key'),
-    clientExtensionResults: z.record(z.unknown()).optional(),
+    clientExtensionResults: z.record(z.string(), z.unknown()).optional(),
     authenticatorAttachment: z.string().optional().nullable(),
 });
 
