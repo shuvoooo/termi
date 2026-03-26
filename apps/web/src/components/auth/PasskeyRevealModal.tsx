@@ -60,11 +60,12 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({}),
             });
-            if (!optRes.ok) {
-                const data = await optRes.json().catch(() => ({}));
-                throw new Error(data.error || 'Failed to get passkey options');
+            const optData = await optRes.json().catch(() => ({}));
+            if (!optRes.ok || !optData.success) {
+                throw new Error(optData.error || 'Failed to get passkey options');
             }
-            const options = await optRes.json();
+            // API wraps response in { success: true, data: {...} }
+            const options = optData.data;
 
             // 2. Browser WebAuthn assertion (biometric / security key prompt)
             let assertion;
