@@ -39,15 +39,24 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate --schema=apps/web/prisma/schema.prisma
 
+# Build-time arguments — passed via docker-compose build.args
+ARG NEXT_PUBLIC_GATEWAY_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG SESSION_SECRET=build-time-placeholder-not-used-in-runtime-x
+ARG ENCRYPTION_KEY=build-time-placeholder-not-used-in-runtime-x
+ARG GATEWAY_JWT_SECRET=build-time-placeholder-not-used-in-runtime
+
 # Build application
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# Dummy secrets required by env validation at build time (page data collection).
-# These are NOT used at runtime — real secrets are injected via docker-compose env vars.
-ENV SESSION_SECRET=build-time-placeholder-not-used-in-runtime-x
-ENV ENCRYPTION_KEY=build-time-placeholder-not-used-in-runtime-x
-ENV GATEWAY_JWT_SECRET=build-time-placeholder-not-used-in-runtime
-ENV NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL:-build-time-placeholder-not-used-in-runtime-x}
+# NEXT_PUBLIC_* vars are baked into the JS bundle — must be set at build time.
+ENV NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+# Server-side secrets required by env validation at build time only.
+# Real values are injected at runtime via docker-compose environment.
+ENV SESSION_SECRET=${SESSION_SECRET}
+ENV ENCRYPTION_KEY=${ENCRYPTION_KEY}
+ENV GATEWAY_JWT_SECRET=${GATEWAY_JWT_SECRET}
 
 RUN npm run build --workspace=apps/web
 

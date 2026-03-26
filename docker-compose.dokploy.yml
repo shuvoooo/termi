@@ -10,6 +10,12 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        SESSION_SECRET: ${SESSION_SECRET:-build-time-placeholder-not-used-in-runtime-x}
+        ENCRYPTION_KEY: ${ENCRYPTION_KEY:-build-time-placeholder-not-used-in-runtime-x}
+        GATEWAY_JWT_SECRET: ${GATEWAY_JWT_SECRET:-build-time-placeholder-not-used-in-runtime}
     container_name: termi-web
     restart: unless-stopped
     environment:
@@ -40,6 +46,7 @@ services:
 
       # Other
       NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
