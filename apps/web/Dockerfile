@@ -15,14 +15,16 @@ COPY package.json package-lock.json* ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/gateway/package.json ./apps/gateway/
 
-# Install deps. Then explicitly install linux-arm64-gnu native packages that are absent
+# Install deps. Then explicitly install the correct linux native packages that are absent
 # from the lockfile (generated on macOS); npm never adds them automatically.
+# Detects CPU arch at build time so the same Dockerfile works on both x64 and arm64.
 RUN npm install && \
     LCSS_VER=$(node -p "require('./node_modules/lightningcss/package.json').version") && \
     OXIDE_VER=$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version") && \
+    ARCH=$(node -p "process.arch === 'arm64' ? 'arm64' : 'x64'") && \
     npm install --no-save \
-      "lightningcss-linux-arm64-gnu@${LCSS_VER}" \
-      "@tailwindcss/oxide-linux-arm64-gnu@${OXIDE_VER}"
+      "lightningcss-linux-${ARCH}-gnu@${LCSS_VER}" \
+      "@tailwindcss/oxide-linux-${ARCH}-gnu@${OXIDE_VER}"
 
 # Stage 2: Builder
 FROM node:20-slim AS builder
