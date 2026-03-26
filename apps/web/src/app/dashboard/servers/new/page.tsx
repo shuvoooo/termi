@@ -23,6 +23,8 @@ import {
     Globe,
     Activity,
     Tv,
+    Upload,
+    FileKey,
 } from 'lucide-react';
 
 interface Group {
@@ -72,6 +74,8 @@ export default function NewServerPage() {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showPassphrase, setShowPassphrase] = useState(false);
+    const [keyInputMethod, setKeyInputMethod] = useState<'paste' | 'file'>('paste');
+    const [keyFileName, setKeyFileName] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [testStatus, setTestStatus] = useState<TestStatus>('idle');
     const [testResult, setTestResult] = useState<{ latency?: number; error?: string } | null>(null);
@@ -379,15 +383,82 @@ export default function NewServerPage() {
 
                             {form.authMethod === 'key' && (
                                 <div className="space-y-3">
-                                    <div>
-                                        <label className="label text-xs">Private Key</label>
-                                        <textarea
-                                            value={form.privateKey}
-                                            onChange={(e) => update({ privateKey: e.target.value })}
-                                            className="input text-xs py-2 font-mono min-h-[110px] resize-none leading-relaxed"
-                                            placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"}
-                                        />
+                                    {/* Paste vs Upload sub-toggle */}
+                                    <div className="flex gap-1 p-1 bg-slate-900/60 rounded-lg w-fit border border-slate-700/50">
+                                        {(['paste', 'file'] as const).map((m) => (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                onClick={() => {
+                                                    setKeyInputMethod(m);
+                                                    if (m === 'paste') { setKeyFileName(null); update({ privateKey: '' }); }
+                                                }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                                    keyInputMethod === m
+                                                        ? 'bg-slate-600 text-white shadow-sm'
+                                                        : 'text-slate-400 hover:text-white'
+                                                }`}
+                                            >
+                                                {m === 'paste'
+                                                    ? <Key className="w-3 h-3" />
+                                                    : <Upload className="w-3 h-3" />
+                                                }
+                                                {m === 'paste' ? 'Paste Key' : 'Upload File'}
+                                            </button>
+                                        ))}
                                     </div>
+
+                                    {keyInputMethod === 'paste' ? (
+                                        <div>
+                                            <label className="label text-xs">Private Key</label>
+                                            <textarea
+                                                value={form.privateKey}
+                                                onChange={(e) => update({ privateKey: e.target.value })}
+                                                className="input text-xs py-2 font-mono min-h-[110px] resize-none leading-relaxed"
+                                                placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="label text-xs">Key File (.pem, .ppk)</label>
+                                            <label className={`flex flex-col items-center justify-center gap-2 w-full rounded-lg border-2 border-dashed cursor-pointer transition-colors py-6 px-4 ${
+                                                keyFileName
+                                                    ? 'border-green-500/40 bg-green-500/5 hover:bg-green-500/8'
+                                                    : 'border-slate-700 bg-slate-900/40 hover:border-slate-500 hover:bg-slate-700/20'
+                                            }`}>
+                                                <input
+                                                    type="file"
+                                                    accept=".pem,.ppk,application/x-pem-file"
+                                                    className="sr-only"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+                                                        setKeyFileName(file.name);
+                                                        const reader = new FileReader();
+                                                        reader.onload = (ev) => {
+                                                            update({ privateKey: (ev.target?.result as string) ?? '' });
+                                                        };
+                                                        reader.readAsText(file);
+                                                    }}
+                                                />
+                                                {keyFileName ? (
+                                                    <>
+                                                        <FileKey className="w-5 h-5 text-green-400" />
+                                                        <span className="text-xs font-medium text-green-400 text-center break-all">{keyFileName}</span>
+                                                        <span className="text-[10px] text-slate-500">Click to replace</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="w-5 h-5 text-slate-500" />
+                                                        <span className="text-xs text-slate-400 text-center">
+                                                            Click to select a <span className="font-mono">.pem</span> or <span className="font-mono">.ppk</span> file
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </label>
+                                        </div>
+                                    )}
+
                                     <div className="relative">
                                         <label className="label text-xs">
                                             Passphrase <span className="text-slate-600">(if encrypted)</span>

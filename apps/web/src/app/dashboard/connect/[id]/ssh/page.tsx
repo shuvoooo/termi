@@ -12,6 +12,7 @@ import {
     FolderOpen,
     X,
     KeyRound,
+    Keyboard,
 } from 'lucide-react';
 import FileManagerPanel from '@/components/scp/FileManagerPanel';
 import type { RevealField } from '@/components/auth/PasskeyRevealModal';
@@ -45,6 +46,7 @@ export default function SSHConnectionPage() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [showFiles, setShowFiles] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const terminalKeyHandler = useRef<((key: string) => void) | null>(null);
@@ -52,6 +54,13 @@ export default function SSHConnectionPage() {
     const handleDisconnect = useCallback(() => {}, []);
     const handleError = useCallback((err: string) => {
         console.error('Terminal error:', err);
+    }, []);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
     }, []);
 
     useEffect(() => {
@@ -105,8 +114,6 @@ export default function SSHConnectionPage() {
         }
     };
 
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
@@ -126,8 +133,19 @@ export default function SSHConnectionPage() {
         );
     }
 
+    // keyboard is ~120px tall (2 key rows + padding); shrink container so xterm reflows above it
+    const kbHeight = 120;
+
     return (
-        <div ref={containerRef} className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)]">
+        <div
+            ref={containerRef}
+            className="flex flex-col lg:h-[calc(100vh-6rem)]"
+            style={{
+                height: isMobile && showKeyboard
+                    ? `calc(100dvh - 8rem - ${kbHeight}px)`
+                    : 'calc(100dvh - 8rem)',
+            }}
+        >
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -181,9 +199,10 @@ export default function SSHConnectionPage() {
                     {isMobile && (
                         <button
                             onClick={() => setShowKeyboard(!showKeyboard)}
-                            className={`btn ${showKeyboard ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+                            className={`btn btn-icon ${showKeyboard ? 'btn-primary' : 'btn-ghost'}`}
+                            title={showKeyboard ? 'Hide keyboard' : 'Show keyboard'}
                         >
-                            ⌨️
+                            <Keyboard className="w-4 h-4" />
                         </button>
                     )}
 
@@ -200,7 +219,7 @@ export default function SSHConnectionPage() {
             {/* ── Main area: terminal + optional file panel ── */}
             <div className="flex flex-1 min-h-0 gap-3">
                 {/* Terminal */}
-                <div className={`flex-1 min-w-0 min-h-0 ${showKeyboard ? 'pb-32' : ''}`}>
+                <div className="flex-1 min-w-0 min-h-0">
                     <SSHTerminal
                         serverId={serverId}
                         connectionToken={connectionToken}
