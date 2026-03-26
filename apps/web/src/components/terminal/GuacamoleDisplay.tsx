@@ -53,7 +53,7 @@ export default function GuacamoleDisplay({
             const Guacamole = (module as any).default ?? module;
             // Gateway tunnel
             const gatewayBase =
-                gatewayUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
+                gatewayUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://gateway.termi.dp.shuvoo.com';
             const wsUrl = `${gatewayBase}/connect`;
             // Send display dimensions so guacd uses the actual container size
             const width  = container.clientWidth  || 1280;

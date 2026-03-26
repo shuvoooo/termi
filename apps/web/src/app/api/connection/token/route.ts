@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
         // Return gatewayUrl alongside the token so client components can read
         // it at runtime rather than relying on the NEXT_PUBLIC_ build-time bake-in.
-        const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
+        const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://gateway.termi.dp.shuvoo.com';
 
         return successResponse({ token, gatewayUrl });
     } catch (error) {

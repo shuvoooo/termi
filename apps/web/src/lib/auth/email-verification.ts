@@ -34,7 +34,7 @@ export async function sendVerificationEmail(userId: string, email: string): Prom
         },
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://termi.dp.shuvoo.com';
     const verifyUrl = `${appUrl}/api/auth/verify-email?token=${token}`;
 
     const transporter = createTransporter();

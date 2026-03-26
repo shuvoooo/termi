@@ -46,7 +46,7 @@ export default function SSHTerminal({
     }, []);
 
     const connect = useCallback(() => {
-        const gatewayBase = gatewayUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
+        const gatewayBase = gatewayUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://gateway.termi.dp.shuvoo.com';
         const wsUrl = `${gatewayBase}/connect?token=${connectionToken}&protocol=ssh&serverId=${serverId}`;
 
         const ws = new WebSocket(wsUrl);

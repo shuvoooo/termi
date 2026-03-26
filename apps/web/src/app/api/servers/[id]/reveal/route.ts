@@ -53,7 +53,7 @@ interface RouteParams {
 }
 
 function getRpDetails() {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://termi.dp.shuvoo.com';
     const url = new URL(appUrl);
     return { rpID: url.hostname, origin: url.origin };
 }
