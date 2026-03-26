@@ -79,13 +79,11 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
         html,
     });
 
-    // In dev, log preview URL if using Ethereal
+    // In dev (no SMTP configured), log that an email would have been sent.
+    // Never log the OTP code — even in dev logs may be aggregated or monitored.
     if (!process.env.SMTP_HOST) {
-        console.log('[EmailOTP] Sending email to:', to);
+        console.log('[EmailOTP] No SMTP configured — email would have been sent to:', to);
         console.log('[EmailOTP] Subject:', subject);
-        // Log OTP from message for dev convenience
-        const match = html.match(/(\d{6})/);
-        if (match) console.log('[EmailOTP] OTP code:', match[1]);
     }
 }
 

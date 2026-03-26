@@ -19,6 +19,7 @@ import {
     notFoundResponse,
 } from '@/lib/api';
 import { Protocol } from '@/app/generated/prisma/client';
+import { validateHost } from '@/lib/security/ssrf';
 
 const updateServerSchema = z.object({
     name: z.string().min(1).max(100).optional(),
@@ -85,6 +86,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if ('error' in validation) {
         return validation.error;
+    }
+
+    // Re-validate host against SSRF rules if the host is being changed
+    if (validation.data.host) {
+        const ssrfCheck = await validateHost(
+            validation.data.host,
+            process.env.ALLOW_PRIVATE_NETWORKS === 'true'
+        );
+        if (!ssrfCheck.valid) {
+            return errorResponse(ssrfCheck.error || 'Invalid host', 400);
+        }
     }
 
     try {

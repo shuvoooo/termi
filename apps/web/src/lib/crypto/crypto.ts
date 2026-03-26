@@ -10,7 +10,7 @@
  * SECURITY WARNING: Never log or expose encryption keys or plaintext credentials
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, pbkdf2Sync, createHash, scryptSync } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, pbkdf2Sync, createHash, scryptSync, timingSafeEqual } from 'crypto';
 
 // ============================================================================
 // CONSTANTS
@@ -221,9 +221,9 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
 
         const computedHash = scryptSync(password, salt, 64, { N, r, p, maxmem: 64 * 1024 * 1024 });
 
-        // Constant-time comparison
+        // Constant-time comparison to prevent timing attacks
         return computedHash.length === storedHash.length &&
-            computedHash.every((byte, i) => byte === storedHash[i]);
+            timingSafeEqual(computedHash, storedHash);
     } catch {
         return false;
     }

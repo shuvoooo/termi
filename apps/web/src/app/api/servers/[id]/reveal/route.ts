@@ -1,8 +1,8 @@
 /**
  * POST /api/servers/[id]/reveal
  *
- * Re-authenticates the user (password OR TOTP/email OTP code) then returns
- * a single decrypted credential field. Logs every access to audit trail.
+ * Re-authenticates the user (password, TOTP/email OTP, or passkey) then
+ * returns a single decrypted credential field. Logs every access to audit trail.
  */
 
 import { z } from 'zod';
@@ -20,16 +20,42 @@ import {
 } from '@/lib/api';
 import { credentialRevealRateLimit } from '@/lib/rate-limit';
 import { decryptCredentials } from '@/lib/crypto/credentials';
+import { getSession } from '@/lib/auth/session';
+import {
+    verifyAuthenticationResponse,
+    type AuthenticationResponseJSON,
+} from '@simplewebauthn/server';
+
+const passkeyResponseSchema = z.object({
+    id: z.string(),
+    rawId: z.string(),
+    response: z.object({
+        authenticatorData: z.string(),
+        clientDataJSON: z.string(),
+        signature: z.string(),
+        userHandle: z.string().optional().nullable(),
+    }),
+    type: z.literal('public-key'),
+    clientExtensionResults: z.record(z.unknown()).optional(),
+    authenticatorAttachment: z.string().optional().nullable(),
+});
 
 const revealSchema = z.object({
     field: z.enum(['password', 'privateKey', 'passphrase']),
     // One of these must be present
     authPassword: z.string().optional(),
     authCode: z.string().optional(), // TOTP or email OTP
+    passkeyResponse: passkeyResponseSchema.optional(), // WebAuthn assertion
 });
 
 interface RouteParams {
     params: Promise<{ id: string }>;
+}
+
+function getRpDetails() {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const url = new URL(appUrl);
+    return { rpID: url.hostname, origin: url.origin };
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -49,10 +75,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const validation = await validateBody(request, revealSchema);
     if ('error' in validation) return validation.error;
 
-    const { field, authPassword, authCode } = validation.data;
+    const { field, authPassword, authCode, passkeyResponse } = validation.data;
 
-    if (!authPassword && !authCode) {
-        return errorResponse('Re-authentication required: provide your password or 2FA code', 400);
+    if (!authPassword && !authCode && !passkeyResponse) {
+        return errorResponse('Re-authentication required: provide your password, 2FA code, or passkey', 400);
     }
 
     // Re-authenticate
@@ -66,15 +92,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (!dbUser) return unauthorizedResponse();
         authenticated = await verifyPassword(dbUser.passwordHash, authPassword);
     } else if (authCode) {
-        // Use the verify2FA path but without disrupting the active session
-        // We do a lightweight inline check here
         const dbUser = await prisma.user.findUnique({
             where: { id: user.id },
-            select: {
-                totpSecret: true,
-                totpEnabled: true,
-                twoFactorMethod: true,
-            },
+            select: { totpSecret: true, totpEnabled: true, twoFactorMethod: true },
         });
         if (!dbUser) return unauthorizedResponse();
 
@@ -86,6 +106,64 @@ export async function POST(request: Request, { params }: RouteParams) {
             const { verifyTOTP } = await import('@/lib/auth/totp');
             const totpSecret = decryptCredentialField(dbUser.totpSecret);
             authenticated = verifyTOTP(totpSecret, authCode);
+        }
+    } else if (passkeyResponse) {
+        // WebAuthn passkey re-authentication
+        const session = await getSession();
+        const challenge = session.passkeyChallenge;
+
+        if (!challenge) {
+            return errorResponse('Passkey challenge not found or expired. Please try again.', 400);
+        }
+
+        const passkey = await prisma.passkey.findUnique({
+            where: { credentialID: (passkeyResponse as AuthenticationResponseJSON).id },
+            select: {
+                id: true,
+                userId: true,
+                credentialID: true,
+                credentialPublicKey: true,
+                counter: true,
+                transports: true,
+            },
+        });
+
+        if (!passkey || passkey.userId !== user.id) {
+            return errorResponse('Passkey not found or does not belong to your account', 401);
+        }
+
+        const { rpID, origin } = getRpDetails();
+
+        try {
+            const { verified, authenticationInfo } = await verifyAuthenticationResponse({
+                response: passkeyResponse as AuthenticationResponseJSON,
+                expectedChallenge: challenge,
+                expectedOrigin: origin,
+                expectedRPID: rpID,
+                credential: {
+                    id: passkey.credentialID,
+                    publicKey: new Uint8Array(passkey.credentialPublicKey),
+                    counter: Number(passkey.counter),
+                    transports: passkey.transports as import('@simplewebauthn/server').AuthenticatorTransportFuture[],
+                },
+                requireUserVerification: false,
+            });
+
+            if (verified) {
+                // Clear challenge immediately before any other DB operations
+                // to prevent replay attacks if the subsequent update fails
+                session.passkeyChallenge = undefined;
+                await session.save();
+
+                authenticated = true;
+                // Update counter (replay protection)
+                await prisma.passkey.update({
+                    where: { id: passkey.id },
+                    data: { counter: authenticationInfo.newCounter, lastUsedAt: new Date() },
+                });
+            }
+        } catch (err) {
+            console.error('Passkey reveal verification error:', err);
         }
     }
 
@@ -143,4 +221,3 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return successResponse({ field, value: plainValue });
 }
-

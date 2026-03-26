@@ -11,8 +11,15 @@ import {
     RotateCcw,
     FolderOpen,
     X,
+    KeyRound,
 } from 'lucide-react';
 import FileManagerPanel from '@/components/scp/FileManagerPanel';
+import type { RevealField } from '@/components/auth/PasskeyRevealModal';
+
+const PasskeyRevealModal = dynamic(
+    () => import('@/components/auth/PasskeyRevealModal'),
+    { ssr: false }
+);
 
 const SSHTerminal = dynamic(
     () => import('@/components/terminal/SSHTerminal'),
@@ -29,7 +36,8 @@ export default function SSHConnectionPage() {
     const router = useRouter();
     const serverId = params.id as string;
 
-    const [server, setServer] = useState<{ name: string } | null>(null);
+    const [server, setServer] = useState<{ name: string; hasPassword?: boolean } | null>(null);
+    const [revealField, setRevealField] = useState<RevealField | null>(null);
     const [connectionToken, setConnectionToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -131,6 +139,17 @@ export default function SSHConnectionPage() {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Copy password */}
+                    {server?.hasPassword && (
+                        <button
+                            onClick={() => setRevealField('password')}
+                            className="btn btn-ghost btn-icon"
+                            title="Copy password (passkey required)"
+                        >
+                            <KeyRound className="w-4 h-4" />
+                        </button>
+                    )}
+
                     {/* Files toggle */}
                     <button
                         onClick={() => setShowFiles(f => !f)}
@@ -214,6 +233,16 @@ export default function SSHConnectionPage() {
             {/* Mobile keyboard */}
             {isMobile && showKeyboard && (
                 <VirtualKeyboard onKey={(key) => { terminalKeyHandler.current?.(key); }} />
+            )}
+
+            {/* Passkey credential reveal */}
+            {revealField && server && (
+                <PasskeyRevealModal
+                    serverId={serverId}
+                    serverName={server.name}
+                    field={revealField}
+                    onClose={() => setRevealField(null)}
+                />
             )}
         </div>
     );

@@ -63,6 +63,7 @@ export interface ServerListItem {
     tags: string[];
     isFavorite: boolean;
     lastUsedAt: Date | null;
+    hasPassword: boolean;
     group: {
         id: string;
         name: string;
@@ -134,7 +135,7 @@ export async function createServer(
 // ============================================================================
 
 export async function getServers(userId: string): Promise<ServerListItem[]> {
-    return prisma.server.findMany({
+    const rows = await prisma.server.findMany({
         where: { userId },
         select: {
             id: true,
@@ -144,6 +145,7 @@ export async function getServers(userId: string): Promise<ServerListItem[]> {
             tags: true,
             isFavorite: true,
             lastUsedAt: true,
+            password: true,
             group: {
                 select: {
                     id: true,
@@ -158,6 +160,7 @@ export async function getServers(userId: string): Promise<ServerListItem[]> {
             { name: 'asc' },
         ],
     });
+    return rows.map(({ password, ...rest }) => ({ ...rest, hasPassword: !!password }));
 }
 
 export async function getServerById(
@@ -387,7 +390,7 @@ export async function searchServers(
     groupId?: string,
     favoritesOnly?: boolean
 ): Promise<ServerListItem[]> {
-    return prisma.server.findMany({
+    const rows = await prisma.server.findMany({
         where: {
             userId,
             AND: [
@@ -411,6 +414,7 @@ export async function searchServers(
             tags: true,
             isFavorite: true,
             lastUsedAt: true,
+            password: true,
             group: {
                 select: {
                     id: true,
@@ -425,6 +429,7 @@ export async function searchServers(
             { name: 'asc' },
         ],
     });
+    return rows.map(({ password, ...rest }) => ({ ...rest, hasPassword: !!password }));
 }
 
 // ============================================================================

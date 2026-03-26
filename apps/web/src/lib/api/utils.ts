@@ -105,17 +105,36 @@ export async function validateBody<T>(
 // ============================================================================
 
 /**
- * Get client IP address from request
+ * Get client IP address from request.
+ *
+ * Priority order:
+ * 1. cf-connecting-ip  — set by Cloudflare; cannot be spoofed by end-users.
+ * 2. x-real-ip         — set by a single trusted reverse proxy (nginx/caddy).
+ * 3. x-forwarded-for   — only trusted when TRUSTED_PROXY=true is set, because
+ *                        the header is user-controllable in direct deployments.
+ *
+ * Without a reverse proxy, none of these headers are set and the connection
+ * address would need to come from the runtime (not available in Next.js edge).
+ * We fall back to 'unknown' which is safe — rate limits will bucket to a
+ * single shared key, providing conservative protection rather than bypassing.
  */
 export function getClientIP(request: Request): string {
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    if (forwardedFor) {
-        return forwardedFor.split(',')[0].trim();
-    }
+    // Cloudflare — always authoritative when present
+    const cfIP = request.headers.get('cf-connecting-ip');
+    if (cfIP) return cfIP.trim();
 
+    // Single-proxy real IP (nginx `proxy_set_header X-Real-IP $remote_addr`)
     const realIP = request.headers.get('x-real-ip');
-    if (realIP) {
-        return realIP;
+    if (realIP) return realIP.trim();
+
+    // X-Forwarded-For — only trust if explicitly configured (behind a trusted proxy)
+    if (process.env.TRUSTED_PROXY === 'true') {
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        if (forwardedFor) {
+            // Take the last untrusted IP (rightmost entry added by our proxy)
+            const ips = forwardedFor.split(',').map((s) => s.trim());
+            return ips[ips.length - 1] || 'unknown';
+        }
     }
 
     return 'unknown';

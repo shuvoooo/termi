@@ -5,10 +5,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     Server, Terminal, FolderOpen, Monitor, Plus,
-    Star, StarOff, MoreVertical, Search, RefreshCw,
+    Star, MoreVertical, Search, RefreshCw,
     Layers, Pencil, Trash2, AlertTriangle,
+    LayoutGrid, List, KeyRound, Clock, Wifi, WifiOff,
 } from 'lucide-react';
 import { useSessionsContext } from './sessions-context';
+import dynamic from 'next/dynamic';
+import type { RevealField } from '@/components/auth/PasskeyRevealModal';
+
+const PasskeyRevealModal = dynamic(
+    () => import('@/components/auth/PasskeyRevealModal'),
+    { ssr: false }
+);
 
 interface ServerItem {
     id: string;
@@ -17,6 +25,7 @@ interface ServerItem {
     protocol: 'SSH' | 'SCP' | 'RDP' | 'VNC';
     tags: string[];
     isFavorite: boolean;
+    hasPassword: boolean;
     lastUsedAt: string | null;
     group: {
         id: string;
@@ -34,6 +43,8 @@ interface ServerMetrics {
     network?: { rxBytes: number; txBytes: number };
     error?: string;
 }
+
+type ViewMode = 'grid' | 'list';
 
 const protocolIcons = {
     SSH: Terminal,
@@ -56,53 +67,412 @@ function formatBytes(bytes: number): string {
     return `${bytes}B`;
 }
 
+function formatRelativeTime(dateStr: string | null): string {
+    if (!dateStr) return 'Never';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
 function MetricBar({ label, percent, value }: { label: string; percent: number; value: string }) {
     const color =
         percent >= 90 ? 'bg-red-500' :
         percent >= 70 ? 'bg-yellow-500' :
-        'bg-green-500';
+        'bg-emerald-500';
 
     return (
         <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] text-dark-400 w-7 shrink-0">{label}</span>
-            <div className="flex-1 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+            <span className="text-[10px] text-dark-400 w-7 shrink-0 font-medium">{label}</span>
+            <div className="flex-1 h-1 bg-dark-700 rounded-full overflow-hidden">
                 <div
-                    className={`h-full rounded-full transition-all duration-500 ${color}`}
+                    className={`h-full rounded-full transition-all duration-700 ${color}`}
                     style={{ width: `${Math.min(100, percent)}%` }}
                 />
             </div>
-            <span className="text-[10px] text-dark-300 w-8 text-right shrink-0">{value}</span>
+            <span className="text-[10px] text-dark-300 w-8 text-right shrink-0 tabular-nums">{value}</span>
         </div>
     );
 }
 
-function StatusDot({ metrics, loading }: { metrics: ServerMetrics | null; loading: boolean }) {
-    if (loading) {
-        return <span className="w-2 h-2 rounded-full bg-dark-500 animate-pulse" title="Checking..." />;
-    }
+function StatusIndicator({ metrics, loading }: { metrics: ServerMetrics | null; loading: boolean }) {
+    if (loading) return (
+        <span className="flex items-center gap-1 text-[10px] text-dark-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-dark-500 animate-pulse" />
+        </span>
+    );
     if (!metrics) return null;
-
-    if (!metrics.reachable) {
-        return <span className="w-2 h-2 rounded-full bg-red-500" title="Offline" />;
-    }
-
-    const label = metrics.latencyMs != null ? `Online · ${metrics.latencyMs}ms` : 'Online';
-    return <span className="w-2 h-2 rounded-full bg-green-500" title={label} />;
+    if (!metrics.reachable) return (
+        <span className="flex items-center gap-1">
+            <WifiOff className="w-3 h-3 text-red-400" />
+        </span>
+    );
+    return (
+        <span className="flex items-center gap-1">
+            <Wifi className="w-3 h-3 text-emerald-400" />
+            {metrics.latencyMs != null && (
+                <span className="text-[10px] text-emerald-400 tabular-nums">{metrics.latencyMs}ms</span>
+            )}
+        </span>
+    );
 }
+
+// ─── Grid Card ───────────────────────────────────────────────────────────────
+
+function GridCard({
+    server, m, mLoading,
+    onFavorite, onEdit, onDelete, onCopyPassword, onConnect, onSessions,
+    menuOpen, setMenuOpen, menuRef,
+}: {
+    server: ServerItem;
+    m: ServerMetrics | null;
+    mLoading: boolean;
+    onFavorite: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onCopyPassword: () => void;
+    onConnect: () => void;
+    onSessions: () => void;
+    menuOpen: boolean;
+    setMenuOpen: (v: boolean) => void;
+    menuRef: React.RefObject<HTMLDivElement | null>;
+}) {
+    const Icon = protocolIcons[server.protocol];
+
+    return (
+        <div className="card card-hover group flex flex-col overflow-hidden">
+            <div className="p-4 flex-1">
+                {/* Title row */}
+                <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${protocolColors[server.protocol]}`}>
+                        <Icon className="w-4 h-4" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <h3 className="font-medium truncate text-sm leading-tight">{server.name}</h3>
+                            <StatusIndicator metrics={m} loading={mLoading} />
+                        </div>
+                        <p className="text-xs text-dark-400 truncate mt-0.5">
+                            {server.description || server.protocol}
+                        </p>
+                    </div>
+
+                    {/* Actions: always-visible star + hover menu */}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                            onClick={onFavorite}
+                            className={`p-1 rounded transition-all ${
+                                server.isFavorite
+                                    ? 'text-yellow-400'
+                                    : 'text-dark-600 opacity-0 group-hover:opacity-100 hover:text-yellow-400'
+                            }`}
+                            title={server.isFavorite ? 'Remove favorite' : 'Add favorite'}
+                        >
+                            <Star className={`w-3.5 h-3.5 ${server.isFavorite ? 'fill-yellow-400' : ''}`} />
+                        </button>
+
+                        <div className="relative" ref={menuOpen ? menuRef : undefined}>
+                            <button
+                                onClick={() => setMenuOpen(!menuOpen)}
+                                className="p-1 rounded text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                            {menuOpen && (
+                                <div className="absolute right-0 top-6 z-30 w-40 rounded-lg border border-dark-700 bg-dark-800 shadow-2xl py-1">
+                                    <button
+                                        onClick={onEdit}
+                                        className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5 text-dark-400" /> Edit
+                                    </button>
+                                    {server.hasPassword && (
+                                        <button
+                                            onClick={onCopyPassword}
+                                            className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                                        >
+                                            <KeyRound className="w-3.5 h-3.5 text-dark-400" /> Copy Password
+                                        </button>
+                                    )}
+                                    <div className="my-1 border-t border-dark-700" />
+                                    <button
+                                        onClick={onDelete}
+                                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-dark-700 transition-colors"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Badges */}
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    <span className={`badge text-[10px] px-1.5 py-0.5 ${protocolColors[server.protocol]}`}>
+                        {server.protocol}
+                    </span>
+                    {server.group && (
+                        <span
+                            className="badge text-[10px] px-1.5 py-0.5"
+                            style={{
+                                backgroundColor: `${server.group.color}20`,
+                                color: server.group.color || undefined,
+                                borderColor: `${server.group.color}40`,
+                            }}
+                        >
+                            {server.group.name}
+                        </span>
+                    )}
+                    {server.tags.slice(0, 2).map((tag) => (
+                        <span key={tag} className="badge text-[10px] px-1.5 py-0.5 bg-dark-700 text-dark-300">
+                            {tag}
+                        </span>
+                    ))}
+                </div>
+
+                {/* SSH Metrics */}
+                {server.protocol === 'SSH' && m && m.reachable && !m.error && (
+                    <div className="mt-3 space-y-1">
+                        {m.cpu != null && <MetricBar label="CPU" percent={m.cpu} value={`${m.cpu}%`} />}
+                        {m.ram && <MetricBar label="RAM" percent={m.ram.percent} value={formatBytes(m.ram.usedBytes)} />}
+                        {m.disk && <MetricBar label="Dsk" percent={m.disk.percent} value={`${m.disk.percent}%`} />}
+                    </div>
+                )}
+
+                {/* Last used */}
+                {server.lastUsedAt && (
+                    <div className="mt-2.5 flex items-center gap-1 text-[10px] text-dark-500">
+                        <Clock className="w-3 h-3" />
+                        {formatRelativeTime(server.lastUsedAt)}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-3 py-2.5 border-t border-dark-700/60 bg-dark-900/40 flex gap-1.5">
+                <button
+                    onClick={onConnect}
+                    className="btn btn-primary flex-1 justify-center text-xs py-1.5 h-auto"
+                >
+                    Connect
+                </button>
+                {server.hasPassword && (
+                    <button
+                        onClick={onCopyPassword}
+                        className="btn btn-secondary btn-icon shrink-0 h-auto py-1.5 px-2"
+                        title="Copy password (passkey required)"
+                    >
+                        <KeyRound className="w-3.5 h-3.5" />
+                    </button>
+                )}
+                {server.protocol === 'SSH' && (
+                    <button
+                        onClick={onSessions}
+                        className="btn btn-secondary btn-icon shrink-0 h-auto py-1.5 px-2"
+                        title="Open in Sessions tab"
+                    >
+                        <Layers className="w-3.5 h-3.5" />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── List Row ─────────────────────────────────────────────────────────────────
+
+function ListRow({
+    server, m, mLoading,
+    onFavorite, onEdit, onDelete, onCopyPassword, onConnect, onSessions,
+    menuOpen, setMenuOpen, menuRef,
+}: {
+    server: ServerItem;
+    m: ServerMetrics | null;
+    mLoading: boolean;
+    onFavorite: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onCopyPassword: () => void;
+    onConnect: () => void;
+    onSessions: () => void;
+    menuOpen: boolean;
+    setMenuOpen: (v: boolean) => void;
+    menuRef: React.RefObject<HTMLDivElement | null>;
+}) {
+    const Icon = protocolIcons[server.protocol];
+
+    return (
+        <div className="group flex items-center gap-3 px-4 py-3 border-b border-dark-700/50 last:border-0 hover:bg-dark-800/50 transition-colors">
+            {/* Protocol icon */}
+            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${protocolColors[server.protocol]}`}>
+                <Icon className="w-3.5 h-3.5" />
+            </div>
+
+            {/* Name + description */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm truncate">{server.name}</span>
+                    <StatusIndicator metrics={m} loading={mLoading} />
+                </div>
+                <p className="text-xs text-dark-400 truncate">
+                    {server.description || server.protocol}
+                </p>
+            </div>
+
+            {/* Group / tags — hidden on small screens */}
+            <div className="hidden lg:flex items-center gap-1.5 shrink-0">
+                {server.group && (
+                    <span
+                        className="badge text-[10px] px-1.5 py-0.5"
+                        style={{
+                            backgroundColor: `${server.group.color}20`,
+                            color: server.group.color || undefined,
+                        }}
+                    >
+                        {server.group.name}
+                    </span>
+                )}
+                {server.tags.slice(0, 2).map((tag) => (
+                    <span key={tag} className="badge text-[10px] px-1.5 py-0.5 bg-dark-700 text-dark-300">
+                        {tag}
+                    </span>
+                ))}
+            </div>
+
+            {/* SSH inline metrics — hidden on small screens */}
+            {server.protocol === 'SSH' && m && m.reachable && !m.error && (
+                <div className="hidden xl:flex items-center gap-3 w-40 shrink-0">
+                    {m.cpu != null && (
+                        <div className="flex items-center gap-1 text-[10px] text-dark-400 tabular-nums">
+                            <span className={`w-1.5 h-1.5 rounded-full ${m.cpu >= 90 ? 'bg-red-500' : m.cpu >= 70 ? 'bg-yellow-500' : 'bg-emerald-500'}`} />
+                            {m.cpu}%
+                        </div>
+                    )}
+                    {m.ram && (
+                        <div className="flex items-center gap-1 text-[10px] text-dark-400 tabular-nums">
+                            RAM {formatBytes(m.ram.usedBytes)}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Last used */}
+            <div className="hidden md:flex items-center gap-1 text-[10px] text-dark-500 w-16 shrink-0 justify-end">
+                {formatRelativeTime(server.lastUsedAt)}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+                <button
+                    onClick={onFavorite}
+                    className={`p-1 rounded transition-all ${
+                        server.isFavorite
+                            ? 'text-yellow-400'
+                            : 'text-dark-600 opacity-0 group-hover:opacity-100 hover:text-yellow-400'
+                    }`}
+                >
+                    <Star className={`w-3.5 h-3.5 ${server.isFavorite ? 'fill-yellow-400' : ''}`} />
+                </button>
+
+                {server.hasPassword && (
+                    <button
+                        onClick={onCopyPassword}
+                        className="p-1.5 rounded text-dark-500 hover:text-primary-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Copy password (passkey required)"
+                    >
+                        <KeyRound className="w-3.5 h-3.5" />
+                    </button>
+                )}
+
+                <button
+                    onClick={onConnect}
+                    className="btn btn-primary text-xs py-1 h-auto px-2.5"
+                >
+                    Connect
+                </button>
+
+                {server.protocol === 'SSH' && (
+                    <button
+                        onClick={onSessions}
+                        className="btn btn-secondary btn-icon h-auto py-1.5 px-1.5 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Open in Sessions"
+                    >
+                        <Layers className="w-3.5 h-3.5" />
+                    </button>
+                )}
+
+                <div className="relative" ref={menuOpen ? menuRef : undefined}>
+                    <button
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        className="p-1 rounded text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                    {menuOpen && (
+                        <div className="absolute right-0 top-6 z-30 w-40 rounded-lg border border-dark-700 bg-dark-800 shadow-2xl py-1">
+                            <button
+                                onClick={onEdit}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                            >
+                                <Pencil className="w-3.5 h-3.5 text-dark-400" /> Edit
+                            </button>
+                            {server.hasPassword && (
+                                <button
+                                    onClick={onCopyPassword}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                                >
+                                    <KeyRound className="w-3.5 h-3.5 text-dark-400" /> Copy Password
+                                </button>
+                            )}
+                            <div className="my-1 border-t border-dark-700" />
+                            <button
+                                onClick={onDelete}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-dark-700 transition-colors"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
     const router = useRouter();
     const { addSession, sessions } = useSessionsContext();
+
     const [servers, setServers] = useState<ServerItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'favorites'>('all');
+    const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [metrics, setMetrics] = useState<Record<string, ServerMetrics | null>>({});
     const [metricsLoading, setMetricsLoading] = useState<Record<string, boolean>>({});
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<ServerItem | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [revealTarget, setRevealTarget] = useState<{ server: ServerItem; field: RevealField } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Persist view preference
+    useEffect(() => {
+        const saved = localStorage.getItem('dashboard-view') as ViewMode | null;
+        if (saved === 'grid' || saved === 'list') setViewMode(saved);
+    }, []);
+
+    const switchView = (v: ViewMode) => {
+        setViewMode(v);
+        localStorage.setItem('dashboard-view', v);
+    };
 
     const fetchServers = async () => {
         setLoading(true);
@@ -113,10 +483,7 @@ export default function DashboardPage() {
 
             const response = await fetch(`/api/servers?${params}`);
             const data = await response.json();
-
-            if (data.success) {
-                setServers(data.data.servers);
-            }
+            if (data.success) setServers(data.data.servers);
         } catch (error) {
             console.error('Failed to fetch servers:', error);
         } finally {
@@ -126,22 +493,17 @@ export default function DashboardPage() {
 
     const fetchMetrics = useCallback(async (serverList: ServerItem[]) => {
         if (serverList.length === 0) return;
-
-        // Mark all as loading
         const loadingState: Record<string, boolean> = {};
         serverList.forEach((s) => { loadingState[s.id] = true; });
         setMetricsLoading(loadingState);
 
-        // Fetch in parallel, staggered slightly to avoid hammering
         await Promise.all(
             serverList.map(async (server, i) => {
-                await new Promise((r) => setTimeout(r, i * 100));
+                await new Promise((r) => setTimeout(r, i * 80));
                 try {
                     const res = await fetch(`/api/servers/${server.id}/metrics`);
                     const data = await res.json();
-                    if (data.success) {
-                        setMetrics((prev) => ({ ...prev, [server.id]: data.data.metrics }));
-                    }
+                    if (data.success) setMetrics((prev) => ({ ...prev, [server.id]: data.data.metrics }));
                 } catch {
                     setMetrics((prev) => ({ ...prev, [server.id]: null }));
                 } finally {
@@ -151,18 +513,12 @@ export default function DashboardPage() {
         );
     }, []);
 
-    useEffect(() => {
-        fetchServers();
-    }, [searchQuery, filter]);
+    useEffect(() => { fetchServers(); }, [searchQuery, filter]);
 
-    // Fetch metrics whenever server list changes
     useEffect(() => {
-        if (!loading && servers.length > 0) {
-            fetchMetrics(servers);
-        }
+        if (!loading && servers.length > 0) fetchMetrics(servers);
     }, [loading, servers, fetchMetrics]);
 
-    // Auto-refresh metrics every 30 s
     useEffect(() => {
         if (servers.length === 0) return;
         const interval = setInterval(() => fetchMetrics(servers), 30_000);
@@ -170,29 +526,14 @@ export default function DashboardPage() {
     }, [servers, fetchMetrics]);
 
     const toggleFavorite = async (serverId: string) => {
-        try {
-            const server = servers.find((s) => s.id === serverId);
-            if (!server) return;
-
-            await fetch(`/api/servers/${serverId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isFavorite: !server.isFavorite }),
-            });
-
-            setServers(
-                servers.map((s) =>
-                    s.id === serverId ? { ...s, isFavorite: !s.isFavorite } : s
-                )
-            );
-        } catch (error) {
-            console.error('Failed to toggle favorite:', error);
-        }
-    };
-
-    const getConnectUrl = (server: ServerItem) => {
-        const protocol = server.protocol.toLowerCase();
-        return `/dashboard/connect/${server.id}/${protocol}`;
+        const server = servers.find((s) => s.id === serverId);
+        if (!server) return;
+        await fetch(`/api/servers/${serverId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isFavorite: !server.isFavorite }),
+        });
+        setServers(servers.map((s) => s.id === serverId ? { ...s, isFavorite: !s.isFavorite } : s));
     };
 
     const openInSessions = async (server: ServerItem) => {
@@ -212,8 +553,6 @@ export default function DashboardPage() {
                 setMetrics((prev) => { const next = { ...prev }; delete next[deleteConfirm.id]; return next; });
                 setDeleteConfirm(null);
             }
-        } catch (error) {
-            console.error('Failed to delete server:', error);
         } finally {
             setDeleting(false);
         }
@@ -223,33 +562,49 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!openMenu) return;
         const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setOpenMenu(null);
-            }
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenu(null);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [openMenu]);
 
+    const sharedProps = (server: ServerItem) => ({
+        server,
+        m: metrics[server.id] ?? null,
+        mLoading: metricsLoading[server.id] ?? false,
+        onFavorite: () => toggleFavorite(server.id),
+        onEdit: () => { router.push(`/dashboard/servers/${server.id}/edit`); setOpenMenu(null); },
+        onDelete: () => { setDeleteConfirm(server); setOpenMenu(null); },
+        onCopyPassword: () => { setRevealTarget({ server, field: 'password' }); setOpenMenu(null); },
+        onConnect: () => router.push(`/dashboard/connect/${server.id}/${server.protocol.toLowerCase()}`),
+        onSessions: () => openInSessions(server),
+        menuOpen: openMenu === server.id,
+        setMenuOpen: (v: boolean) => setOpenMenu(v ? server.id : null),
+        menuRef,
+    });
+
     return (
         <>
         <div className="max-w-6xl mx-auto">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Servers</h1>
-                    <p className="text-dark-400 mt-1">
-                        Manage and connect to your servers
+                    <h1 className="text-xl font-bold">Servers</h1>
+                    <p className="text-sm text-dark-400 mt-0.5">
+                        {servers.length > 0
+                            ? `${servers.length} server${servers.length === 1 ? '' : 's'}`
+                            : 'Manage and connect to your servers'}
                     </p>
                 </div>
-                <Link href="/dashboard/servers/new" className="btn btn-primary">
+                <Link href="/dashboard/servers/new" className="btn btn-primary text-sm">
                     <Plus className="w-4 h-4" />
                     Add Server
                 </Link>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                {/* Search */}
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
                     <input
@@ -257,26 +612,51 @@ export default function DashboardPage() {
                         placeholder="Search servers..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input pl-10"
+                        className="input pl-9 text-sm h-9"
                     />
                 </div>
-                <div className="flex gap-2">
+
+                <div className="flex gap-2 shrink-0">
+                    {/* Filter */}
                     <button
                         onClick={() => setFilter('all')}
-                        className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn text-xs h-9 px-3 ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
                     >
                         All
                     </button>
                     <button
                         onClick={() => setFilter('favorites')}
-                        className={`btn ${filter === 'favorites' ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn text-xs h-9 px-3 ${filter === 'favorites' ? 'btn-primary' : 'btn-secondary'}`}
                     >
-                        <Star className="w-4 h-4" />
-                        Favorites
+                        <Star className="w-3.5 h-3.5" />
+                        Starred
                     </button>
+
+                    {/* Divider */}
+                    <div className="w-px bg-dark-700 self-stretch" />
+
+                    {/* View toggle */}
+                    <div className="flex rounded-lg border border-dark-700 overflow-hidden">
+                        <button
+                            onClick={() => switchView('grid')}
+                            className={`px-2.5 py-1.5 transition-colors ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-white hover:bg-dark-700'}`}
+                            title="Grid view"
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => switchView('list')}
+                            className={`px-2.5 py-1.5 transition-colors ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-white hover:bg-dark-700'}`}
+                            title="List view"
+                        >
+                            <List className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {/* Refresh */}
                     <button
                         onClick={fetchServers}
-                        className="btn btn-secondary btn-icon"
+                        className="btn btn-secondary btn-icon h-9 w-9"
                         title="Refresh"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -284,191 +664,73 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Server Grid */}
+            {/* Content */}
             {loading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="card p-4">
-                            <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-lg skeleton" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="h-5 w-24 skeleton rounded" />
-                                    <div className="h-4 w-32 skeleton rounded" />
+                viewMode === 'grid' ? (
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="card p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-9 h-9 rounded-lg skeleton" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 w-28 skeleton rounded" />
+                                        <div className="h-3 w-20 skeleton rounded" />
+                                    </div>
+                                </div>
+                                <div className="mt-3 space-y-1.5">
+                                    <div className="h-2 skeleton rounded" />
+                                    <div className="h-2 skeleton rounded" />
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="card overflow-hidden">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-dark-700/50 last:border-0">
+                                <div className="w-8 h-8 rounded-md skeleton" />
+                                <div className="flex-1 space-y-1.5">
+                                    <div className="h-3.5 w-32 skeleton rounded" />
+                                    <div className="h-3 w-20 skeleton rounded" />
+                                </div>
+                                <div className="h-7 w-16 skeleton rounded" />
+                            </div>
+                        ))}
+                    </div>
+                )
             ) : servers.length === 0 ? (
-                <div className="card p-12 text-center">
-                    <Server className="w-12 h-12 mx-auto text-dark-500 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No servers yet</h3>
-                    <p className="text-dark-400 mb-6">
-                        Add your first server to get started
-                    </p>
+                <div className="card p-16 text-center">
+                    <Server className="w-12 h-12 mx-auto text-dark-600 mb-4" />
+                    <h3 className="font-medium mb-1.5">No servers yet</h3>
+                    <p className="text-sm text-dark-400 mb-6">Add your first server to get started</p>
                     <Link href="/dashboard/servers/new" className="btn btn-primary">
-                        <Plus className="w-4 h-4" />
-                        Add Server
+                        <Plus className="w-4 h-4" /> Add Server
                     </Link>
                 </div>
-            ) : (
+            ) : viewMode === 'grid' ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {servers.map((server) => {
-                        const Icon = protocolIcons[server.protocol];
-                        const m = metrics[server.id] ?? null;
-                        const mLoading = metricsLoading[server.id] ?? false;
-
-                        return (
-                            <div key={server.id} className="card card-hover group flex flex-col">
-                                <div className="p-4 flex-1">
-                                    <div className="flex items-start gap-3">
-                                        <div
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center ${protocolColors[server.protocol]}`}
-                                        >
-                                            <Icon className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-medium truncate">{server.name}</h3>
-                                                <StatusDot metrics={m} loading={mLoading} />
-                                                <button
-                                                    onClick={() => toggleFavorite(server.id)}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-                                                >
-                                                    {server.isFavorite ? (
-                                                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                                    ) : (
-                                                        <StarOff className="w-4 h-4 text-dark-500 hover:text-yellow-400" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                            <p className="text-sm text-dark-400 truncate">
-                                                {server.description || server.protocol}
-                                            </p>
-                                        </div>
-                                        <div className="relative" ref={openMenu === server.id ? menuRef : undefined}>
-                                            <button
-                                                onClick={() => setOpenMenu(openMenu === server.id ? null : server.id)}
-                                                className="p-1 text-dark-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <MoreVertical className="w-4 h-4" />
-                                            </button>
-                                            {openMenu === server.id && (
-                                                <div className="absolute right-0 top-7 z-20 w-36 rounded-lg border border-dark-700 bg-dark-800 shadow-xl py-1">
-                                                    <Link
-                                                        href={`/dashboard/servers/${server.id}/edit`}
-                                                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-dark-700 transition-colors"
-                                                        onClick={() => setOpenMenu(null)}
-                                                    >
-                                                        <Pencil className="w-3.5 h-3.5 text-dark-400" />
-                                                        Edit
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => { setDeleteConfirm(server); setOpenMenu(null); }}
-                                                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-dark-700 transition-colors"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Tags & Group */}
-                                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                                        <span className={`badge ${protocolColors[server.protocol]}`}>
-                                            {server.protocol}
-                                        </span>
-                                        {server.group && (
-                                            <span
-                                                className="badge"
-                                                style={{
-                                                    backgroundColor: `${server.group.color}20`,
-                                                    color: server.group.color || undefined,
-                                                }}
-                                            >
-                                                {server.group.name}
-                                            </span>
-                                        )}
-                                        {server.tags.slice(0, 2).map((tag) => (
-                                            <span key={tag} className="badge bg-dark-700 text-dark-300">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                        {m && m.reachable && m.latencyMs != null && (
-                                            <span className="badge bg-dark-700 text-dark-300 ml-auto">
-                                                {m.latencyMs}ms
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Metrics — SSH only */}
-                                    {server.protocol === 'SSH' && m && m.reachable && !m.error && (
-                                        <div className="mt-3 space-y-1.5">
-                                            {m.cpu != null && (
-                                                <MetricBar
-                                                    label="CPU"
-                                                    percent={m.cpu}
-                                                    value={`${m.cpu}%`}
-                                                />
-                                            )}
-                                            {m.ram && (
-                                                <MetricBar
-                                                    label="RAM"
-                                                    percent={m.ram.percent}
-                                                    value={`${formatBytes(m.ram.usedBytes)}`}
-                                                />
-                                            )}
-                                            {m.disk && (
-                                                <MetricBar
-                                                    label="Disk"
-                                                    percent={m.disk.percent}
-                                                    value={`${m.disk.percent}%`}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* SSH metric error hint */}
-                                    {server.protocol === 'SSH' && m && m.reachable && m.error && (
-                                        <p className="mt-2 text-[10px] text-dark-500 truncate" title={m.error}>
-                                            Metrics unavailable
-                                        </p>
-                                    )}
-
-                                    {/* Non-SSH reachable but no metrics */}
-                                    {server.protocol !== 'SSH' && m && m.reachable && (
-                                        <p className="mt-2 text-[10px] text-dark-500">
-                                            Metrics require SSH
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Connect Button(s) */}
-                                <div className="px-4 py-3 border-t border-dark-700 bg-dark-900/50 flex gap-2">
-                                    <Link
-                                        href={getConnectUrl(server)}
-                                        className="btn btn-primary flex-1 justify-center text-sm"
-                                    >
-                                        Connect
-                                    </Link>
-                                    {server.protocol === 'SSH' && (
-                                        <button
-                                            onClick={() => openInSessions(server)}
-                                            className="btn btn-secondary btn-icon shrink-0"
-                                            title="Open in Sessions tab"
-                                        >
-                                            <Layers className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {servers.map((server) => (
+                        <GridCard key={server.id} {...sharedProps(server)} />
+                    ))}
+                </div>
+            ) : (
+                <div className="card overflow-hidden">
+                    {/* List header */}
+                    <div className="flex items-center gap-3 px-4 py-2 border-b border-dark-700/60 bg-dark-900/40">
+                        <div className="w-8 shrink-0" />
+                        <div className="flex-1 text-[11px] text-dark-500 font-medium uppercase tracking-wider">Server</div>
+                        <div className="hidden lg:block w-32 text-[11px] text-dark-500 font-medium uppercase tracking-wider shrink-0">Group / Tags</div>
+                        <div className="hidden xl:block w-40 text-[11px] text-dark-500 font-medium uppercase tracking-wider shrink-0">Metrics</div>
+                        <div className="hidden md:block w-16 text-[11px] text-dark-500 font-medium uppercase tracking-wider shrink-0 text-right">Last Used</div>
+                        <div className="w-32 shrink-0" />
+                    </div>
+                    {servers.map((server) => (
+                        <ListRow key={server.id} {...sharedProps(server)} />
+                    ))}
                 </div>
             )}
         </div>
+
         {/* Delete confirmation modal */}
         {deleteConfirm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -488,23 +750,25 @@ export default function DashboardPage() {
                         All associated data will be permanently removed.
                     </p>
                     <div className="flex gap-3 justify-end">
-                        <button
-                            onClick={() => setDeleteConfirm(null)}
-                            disabled={deleting}
-                            className="btn btn-secondary"
-                        >
+                        <button onClick={() => setDeleteConfirm(null)} disabled={deleting} className="btn btn-secondary">
                             Cancel
                         </button>
-                        <button
-                            onClick={handleDelete}
-                            disabled={deleting}
-                            className="btn bg-red-600 hover:bg-red-500 text-white"
-                        >
-                            {deleting ? 'Deleting...' : 'Delete'}
+                        <button onClick={handleDelete} disabled={deleting} className="btn bg-red-600 hover:bg-red-500 text-white">
+                            {deleting ? 'Deleting…' : 'Delete'}
                         </button>
                     </div>
                 </div>
             </div>
+        )}
+
+        {/* Passkey credential reveal modal */}
+        {revealTarget && (
+            <PasskeyRevealModal
+                serverId={revealTarget.server.id}
+                serverName={revealTarget.server.name}
+                field={revealTarget.field}
+                onClose={() => setRevealTarget(null)}
+            />
         )}
         </>
     );
