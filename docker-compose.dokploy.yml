@@ -13,8 +13,8 @@ services:
     container_name: termi-web
     restart: unless-stopped
     environment:
-      # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-termi}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-termi}
+      # Database — set DATABASE_URL in your .env to point at your external database
+      DATABASE_URL: ${DATABASE_URL}
 
       # Session & Encryption
       SESSION_SECRET: ${SESSION_SECRET:-change-this-to-a-long-random-string}
