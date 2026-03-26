@@ -85,6 +85,32 @@ async function checkServer(cfg: MonitorConfig, now: Date): Promise<void> {
         if (msSinceLastCheck < msInterval) return;
     }
 
+    // Decrypt credentials first — the DB stores them encrypted.
+    // checkReachability needs the real hostname, not the ciphertext.
+    let host: string;
+    let username: string;
+    let password: string | undefined;
+    let privateKey: string | undefined;
+    let passphrase: string | undefined;
+
+    try {
+        const creds = decryptCredentials({
+            host: cfg.server.host,
+            username: cfg.server.username,
+            password: cfg.server.password ?? undefined,
+            privateKey: cfg.server.privateKey ?? undefined,
+            passphrase: cfg.server.passphrase ?? undefined,
+        });
+        host = creds.host;
+        username = creds.username;
+        password = creds.password;
+        privateKey = creds.privateKey;
+        passphrase = creds.passphrase;
+    } catch (err) {
+        console.error(`[Monitor] Failed to decrypt credentials for server ${cfg.serverId}:`, err);
+        return;
+    }
+
     let reachable = false;
     let latencyMs: number | undefined;
     let cpuPercent: number | null = null;
@@ -92,7 +118,7 @@ async function checkServer(cfg: MonitorConfig, now: Date): Promise<void> {
     let diskPercent: number | null = null;
 
     try {
-        const result = await checkReachability(cfg.server.host, cfg.server.port, 5000);
+        const result = await checkReachability(host, cfg.server.port, 5000);
         reachable = result.reachable;
         latencyMs = result.latencyMs;
     } catch {
@@ -102,21 +128,13 @@ async function checkServer(cfg: MonitorConfig, now: Date): Promise<void> {
     // Collect SSH metrics if server is reachable and is SSH protocol
     if (reachable && cfg.server.protocol === 'SSH') {
         try {
-            // Decrypt credentials using system key (no master key in background job)
-            const creds = decryptCredentials({
-                host: cfg.server.host,
-                username: cfg.server.username,
-                password: cfg.server.password ?? undefined,
-                privateKey: cfg.server.privateKey ?? undefined,
-                passphrase: cfg.server.passphrase ?? undefined,
-            });
             const metrics = await getSSHMetrics({
-                host: creds.host,
+                host,
                 port: cfg.server.port,
-                username: creds.username,
-                password: creds.password,
-                privateKey: creds.privateKey,
-                passphrase: creds.passphrase,
+                username,
+                password,
+                privateKey,
+                passphrase,
             }, 10000);
             if (!metrics.error) {
                 cpuPercent = metrics.cpu ?? null;

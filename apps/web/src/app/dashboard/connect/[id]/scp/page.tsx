@@ -44,12 +44,12 @@ export default function SCPPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)]">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4 shrink-0">
+            <div className="flex items-center gap-3 mb-3 shrink-0">
                 <Link href="/dashboard" className="btn btn-ghost btn-icon">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
-                <div>
-                    <h1 className="font-medium">{serverName}</h1>
+                <div className="min-w-0">
+                    <h1 className="font-medium truncate">{serverName}</h1>
                     <span className="text-sm text-dark-400">File Manager (SFTP)</span>
                 </div>
             </div>
