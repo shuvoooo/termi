@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
 import {
     Shield,
@@ -186,14 +186,13 @@ export default function SettingsPage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [toasts, setToasts] = useState<Toast[]>([]);
-    let toastId = 0;
+    const toastIdRef = useRef(0);
 
     const addToast = useCallback((type: ToastType, message: string, duration = 5000) => {
-        const id = ++toastId;
+        const id = ++toastIdRef.current;
         setToasts((prev) => [...prev, { id, type, message }]);
         setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), duration);
         return id;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const dismissToast = useCallback((id: number) => {
@@ -239,14 +238,12 @@ export default function SettingsPage() {
                 const data = await res.json();
                 if (data.success) {
                     setUser(data.data.user);
-                    if (data.data.user.passkeyEnabled) {
-                        loadPasskeys();
-                    }
                 }
             } catch { /* ignore */ }
             finally { setLoading(false); }
         }
-        init();
+        void init();
+        void loadPasskeys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

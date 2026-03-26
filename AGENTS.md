@@ -84,7 +84,7 @@ if (!result.valid) return errorResponse(result.error!, 400);
 `apps/gateway` uses `"type": "module"`. All local imports must include the `.js` extension even for TypeScript source files (e.g. `import { SSHHandler } from './handlers/ssh.js'`).
 
 ### Security Headers / CSP
-`apps/web/src/proxy.ts` is the Next.js middleware that applies CSP and all security headers. It exports `middleware` (the required Next.js name) and `config` with a `matcher`. Nonces are generated per-request and forwarded via the `x-nonce` request header to server components.
+`apps/web/src/proxy.ts` is the Next.js 16 proxy (previously called middleware) that applies CSP and all security headers. It exports `proxy` (the required Next.js 16 name) and `config` with a `matcher`. Nonces are generated per-request and forwarded via the `x-nonce` request header to server components.
 
 ### Native Modules / Bundling
 `ssh2` (used by `metrics.service.ts` and `sftp.service.ts`) has native addons (`cpu-features`, `sshcrypto`). It is listed in `next.config.mjs → serverExternalPackages` so Next.js/Turbopack does not try to bundle it.

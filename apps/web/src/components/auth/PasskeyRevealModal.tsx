@@ -17,7 +17,7 @@
 
 import { useState, useEffect } from 'react';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { X, KeyRound, Copy, Check, Eye, EyeOff, Fingerprint, Loader2, AlertCircle } from 'lucide-react';
+import { X, KeyRound, Copy, Check, Eye, EyeOff, Fingerprint, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export type RevealField = 'password' | 'privateKey' | 'passphrase';
 
@@ -28,7 +28,7 @@ interface Props {
     onClose: () => void;
 }
 
-type Step = 'prompt' | 'authenticating' | 'revealed' | 'error';
+type Step = 'authenticating' | 'revealed' | 'error';
 
 const fieldLabel: Record<RevealField, string> = {
     password: 'Password',
@@ -36,16 +36,38 @@ const fieldLabel: Record<RevealField, string> = {
     passphrase: 'Passphrase',
 };
 
+/** Map WebAuthn DOMException names to user-friendly messages */
+function getWebAuthnErrorMessage(err: unknown): string {
+    if (!(err instanceof Error)) return 'Passkey authentication failed';
+
+    switch (err.name) {
+        case 'NotAllowedError':
+            return 'Passkey authentication was cancelled or timed out. Please try again.';
+        case 'SecurityError':
+            return 'Security error — ensure the app is running on HTTPS or localhost.';
+        case 'InvalidStateError':
+            return 'No passkey found for this account on this device. Register a passkey in Settings.';
+        case 'AbortError':
+            return 'Authentication was aborted. Please try again.';
+        case 'NotSupportedError':
+            return 'Passkeys are not supported on this browser. Try Chrome 108+, Safari 16+, or Firefox 119+.';
+        case 'UnknownError':
+            return 'An unknown error occurred. Ensure your device has Touch ID / Face ID enabled.';
+        default:
+            return err.message || 'Passkey authentication failed';
+    }
+}
+
 export default function PasskeyRevealModal({ serverId, serverName, field, onClose }: Props) {
-    const [step, setStep] = useState<Step>('prompt');
+    const [step, setStep] = useState<Step>('authenticating');
     const [errorMsg, setErrorMsg] = useState('');
     const [revealedValue, setRevealedValue] = useState('');
     const [showValue, setShowValue] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    // Auto-trigger passkey auth on mount (smooth UX)
+    // Auto-trigger passkey auth on mount
     useEffect(() => {
-        handlePasskeyAuth();
+        void handlePasskeyAuth();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -53,8 +75,9 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
         setStep('authenticating');
         setErrorMsg('');
 
+        // 1. Get WebAuthn challenge from server
+        let webAuthnOptions: unknown;
         try {
-            // 1. Get WebAuthn challenge from server
             const optRes = await fetch('/api/auth/passkey/authenticate-options', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -62,57 +85,59 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
             });
             const optData = await optRes.json().catch(() => ({}));
             if (!optRes.ok || !optData.success) {
-                throw new Error(optData.error || 'Failed to get passkey options');
+                setErrorMsg(optData.error || 'Failed to get passkey options from server');
+                setStep('error');
+                return;
             }
-            // API wraps response in { success: true, data: {...} }
-            const options = optData.data;
+            // API wraps WebAuthn options inside { success: true, data: {...} }
+            webAuthnOptions = optData.data;
+        } catch {
+            setErrorMsg('Network error — could not reach the server');
+            setStep('error');
+            return;
+        }
 
-            // 2. Browser WebAuthn assertion (biometric / security key prompt)
-            let assertion;
-            try {
-                assertion = await startAuthentication({ optionsJSON: options });
-            } catch (err: unknown) {
-                if (err instanceof Error && err.name === 'NotAllowedError') {
-                    throw new Error('Passkey authentication was cancelled');
-                }
-                throw new Error('Passkey authentication failed');
-            }
+        // 2. Browser WebAuthn assertion — triggers Touch ID / Face ID / security key prompt
+        let assertion: Awaited<ReturnType<typeof startAuthentication>>;
+        try {
+            assertion = await startAuthentication({ optionsJSON: webAuthnOptions as Parameters<typeof startAuthentication>[0]['optionsJSON'] });
+        } catch (err: unknown) {
+            setErrorMsg(getWebAuthnErrorMessage(err));
+            setStep('error');
+            return;
+        }
 
-            // 3. Send assertion + reveal request to server
+        // 3. Send assertion to /reveal — server verifies signature & decrypts credential
+        try {
             const revealRes = await fetch(`/api/servers/${serverId}/reveal`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ field, passkeyResponse: assertion }),
             });
-
-            const revealData = await revealRes.json();
+            const revealData = await revealRes.json().catch(() => ({}));
             if (!revealRes.ok || !revealData.success) {
-                throw new Error(revealData.error || 'Failed to reveal credential');
+                setErrorMsg(revealData.error || 'Failed to reveal credential');
+                setStep('error');
+                return;
             }
-
             setRevealedValue(revealData.data.value);
             setStep('revealed');
-        } catch (err: unknown) {
-            setErrorMsg(err instanceof Error ? err.message : 'Authentication failed');
+        } catch {
+            setErrorMsg('Network error — could not reach the server');
             setStep('error');
         }
     }
 
     async function copyToClipboard() {
+        let ok = false;
         try {
             await navigator.clipboard.writeText(revealedValue);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            ok = true;
         } catch {
-            // Fallback for non-HTTPS or older browsers
-            const ta = document.createElement('textarea');
-            ta.value = revealedValue;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
+            // Clipboard API unavailable (non-HTTPS or locked permissions)
+            // Value is shown in the field — user can select and copy manually
+        }
+        if (ok) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -124,35 +149,42 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
                 {/* Close */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-1 text-dark-400 hover:text-white transition-colors"
+                    className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white transition-colors"
                 >
                     <X className="w-4 h-4" />
                 </button>
 
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center shrink-0">
-                        <KeyRound className="w-5 h-5 text-primary-400" />
+                    <div className="w-10 h-10 rounded-full bg-sky-500/10 flex items-center justify-center shrink-0">
+                        <KeyRound className="w-5 h-5 text-sky-400" />
                     </div>
                     <div className="min-w-0">
                         <h2 className="font-semibold">Reveal {fieldLabel[field]}</h2>
-                        <p className="text-sm text-dark-400 truncate">{serverName}</p>
+                        <p className="text-sm text-slate-400 truncate">{serverName}</p>
                     </div>
                 </div>
 
                 {/* Step: authenticating */}
                 {step === 'authenticating' && (
-                    <div className="flex flex-col items-center gap-4 py-4">
-                        <div className="w-16 h-16 rounded-full bg-primary-500/10 flex items-center justify-center">
-                            <Fingerprint className="w-8 h-8 text-primary-400 animate-pulse" />
+                    <div className="flex flex-col items-center gap-4 py-6">
+                        <div className="relative">
+                            <div className="w-16 h-16 rounded-full bg-sky-500/10 flex items-center justify-center">
+                                <Fingerprint className="w-8 h-8 text-sky-400 animate-pulse" />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center">
+                                <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+                            </div>
                         </div>
-                        <div className="text-center">
-                            <p className="font-medium mb-1">Verify with Passkey</p>
-                            <p className="text-sm text-dark-400">
-                                Use your fingerprint, face, or security key to authenticate
+                        <div className="text-center space-y-1">
+                            <p className="font-medium">Verify with Passkey</p>
+                            <p className="text-sm text-slate-400">
+                                Use Touch ID, Face ID, or your security key to authenticate
                             </p>
                         </div>
-                        <Loader2 className="w-5 h-5 text-dark-400 animate-spin" />
+                        <p className="text-xs text-slate-500 text-center">
+                            Your device should show a biometric prompt shortly
+                        </p>
                     </div>
                 )}
 
@@ -161,14 +193,17 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
                     <div className="space-y-4">
                         <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                             <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-300">{errorMsg}</p>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium text-red-300">Authentication Failed</p>
+                                <p className="text-sm text-red-300/80">{errorMsg}</p>
+                            </div>
                         </div>
                         <div className="flex gap-3 justify-end">
                             <button onClick={onClose} className="btn btn-secondary">
                                 Cancel
                             </button>
                             <button onClick={handlePasskeyAuth} className="btn btn-primary">
-                                <Fingerprint className="w-4 h-4" />
+                                <RefreshCw className="w-4 h-4" />
                                 Try Again
                             </button>
                         </div>
@@ -179,16 +214,16 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
                 {step === 'revealed' && (
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs text-dark-400 mb-1.5 block uppercase tracking-wider">
+                            <label className="text-xs text-slate-400 mb-1.5 block uppercase tracking-wider">
                                 {fieldLabel[field]}
                             </label>
-                            <div className="flex items-center gap-2 p-3 rounded-lg bg-dark-900 border border-dark-700">
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-900 border border-slate-700">
                                 <code className="flex-1 text-sm font-mono break-all text-green-400 select-all min-w-0">
                                     {showValue ? revealedValue : '•'.repeat(Math.min(revealedValue.length, 24))}
                                 </code>
                                 <button
                                     onClick={() => setShowValue((v) => !v)}
-                                    className="p-1.5 text-dark-400 hover:text-white transition-colors shrink-0"
+                                    className="p-1.5 text-slate-400 hover:text-white transition-colors shrink-0"
                                     title={showValue ? 'Hide' : 'Show'}
                                 >
                                     {showValue ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -205,15 +240,9 @@ export default function PasskeyRevealModal({ serverId, serverName, field, onClos
                                 className={`btn ${copied ? 'bg-green-600 hover:bg-green-500 text-white' : 'btn-primary'}`}
                             >
                                 {copied ? (
-                                    <>
-                                        <Check className="w-4 h-4" />
-                                        Copied!
-                                    </>
+                                    <><Check className="w-4 h-4" /> Copied!</>
                                 ) : (
-                                    <>
-                                        <Copy className="w-4 h-4" />
-                                        Copy
-                                    </>
+                                    <><Copy className="w-4 h-4" /> Copy</>
                                 )}
                             </button>
                         </div>
