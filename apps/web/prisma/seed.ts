@@ -7,7 +7,7 @@
 
 import {PrismaPg} from '@prisma/adapter-pg'
 import 'dotenv/config'
-import {PrismaClient, Protocol} from "@prisma/client";
+import {PrismaClient, Protocol} from "../src/app/generated/prisma/client";
 import {encrypt, hashPassword, serializeEncrypted} from "@/lib/crypto";
 
 const adapter = new PrismaPg({

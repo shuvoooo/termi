@@ -1,10 +1,12 @@
 /**
  * Token Validation for Gateway
- * 
- * Validates JWT tokens issued by the web app for establishing connections.
+ *
+ * Validates JWE tokens (A256GCM) issued by the web app.
+ * Credentials are decrypted only inside the gateway process.
  */
 
 import * as jose from 'jose';
+import { createHash } from 'crypto';
 
 // ============================================================================
 // TYPES
@@ -17,9 +19,9 @@ export interface TokenPayload {
     host: string;
     port: number;
     username: string;
-    password?: string;
-    privateKey?: string;
-    passphrase?: string;
+    password?: string | null;
+    privateKey?: string | null;
+    passphrase?: string | null;
     displayWidth?: number;
     displayHeight?: number;
     colorDepth?: number;
@@ -27,23 +29,30 @@ export interface TokenPayload {
 }
 
 // ============================================================================
+// KEY DERIVATION
+// ============================================================================
+
+function getJWEKey(): Uint8Array {
+    const secret = process.env.GATEWAY_JWT_SECRET;
+    if (!secret) throw new Error('GATEWAY_JWT_SECRET is required');
+    return new Uint8Array(createHash('sha256').update(secret).digest());
+}
+
+// ============================================================================
 // TOKEN VALIDATION
 // ============================================================================
 
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.GATEWAY_JWT_SECRET || 'gateway-secret-key-change-in-production'
-);
-
 /**
- * Validate and decode a connection token
+ * Validate and decrypt a JWE connection token.
+ * Only the gateway (holding the key) can read the payload.
  */
 export async function validateToken(token: string): Promise<TokenPayload> {
     try {
-        const { payload } = await jose.jwtVerify(token, JWT_SECRET, {
-            algorithms: ['HS256'],
+        const key = getJWEKey();
+        const { payload } = await jose.jwtDecrypt(token, key, {
+            contentEncryptionAlgorithms: ['A256GCM'],
         });
 
-        // Validate required fields
         if (!payload.userId || !payload.serverId || !payload.host || !payload.username) {
             throw new Error('Invalid token payload');
         }
@@ -55,16 +64,4 @@ export async function validateToken(token: string): Promise<TokenPayload> {
         }
         throw new Error('Invalid token');
     }
-}
-
-/**
- * Generate a connection token (used by web app)
- */
-export async function generateToken(payload: Omit<TokenPayload, 'exp'>): Promise<string> {
-    const token = await new jose.SignJWT(payload as unknown as jose.JWTPayload)
-        .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('5m') // Token valid for 5 minutes
-        .sign(JWT_SECRET);
-
-    return token;
 }

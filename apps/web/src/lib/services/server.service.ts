@@ -209,7 +209,7 @@ export async function getServerForConnection(
     serverId: string,
     userId: string,
     encryptionContext?: EncryptionContext
-): Promise<ServerCredentials & { id: string; port: number; protocol: Protocol } | null> {
+): Promise<ServerCredentials & { id: string; port: number; protocol: Protocol; displayWidth: number | null; displayHeight: number | null; colorDepth: number | null } | null> {
     const server = await prisma.server.findFirst({
         where: { id: serverId, userId },
     });
@@ -243,6 +243,9 @@ export async function getServerForConnection(
         id: server.id,
         port: server.port,
         protocol: server.protocol,
+        displayWidth: server.displayWidth,
+        displayHeight: server.displayHeight,
+        colorDepth: server.colorDepth,
         ...credentials,
     };
 }

@@ -1,6 +1,6 @@
 /**
  * POST /api/auth/verify-2fa
- * Verify TOTP code and complete login
+ * Verify TOTP code, email OTP, or recovery code and complete login
  */
 
 import { z } from 'zod';
@@ -12,20 +12,29 @@ import {
     getClientIP,
     getDeviceInfo,
 } from '@/lib/api';
+import { verify2FARateLimit } from '@/lib/rate-limit';
 
 const verifySchema = z.object({
-    code: z.string().length(6, 'Code must be 6 digits').regex(/^\d+$/, 'Code must be numeric'),
+    // Allow 6-digit OTP or XXXX-XXXX recovery code
+    code: z
+        .string()
+        .min(6)
+        .max(9)
+        .transform((v) => v.trim()),
 });
 
 export async function POST(request: Request) {
-    const validation = await validateBody(request, verifySchema);
+    const ipAddress = getClientIP(request);
 
-    if ('error' in validation) {
-        return validation.error;
+    const rl = verify2FARateLimit(ipAddress);
+    if (!rl.allowed) {
+        return errorResponse('Too many verification attempts. Please try again later.', 429);
     }
 
+    const validation = await validateBody(request, verifySchema);
+    if ('error' in validation) return validation.error;
+
     const { code } = validation.data;
-    const ipAddress = getClientIP(request);
     const deviceInfo = getDeviceInfo(request);
 
     try {
@@ -37,10 +46,7 @@ export async function POST(request: Request) {
 
         return successResponse({
             message: 'Login successful',
-            user: {
-                id: result.userId,
-                email: result.email,
-            },
+            user: { id: result.userId, email: result.email },
         });
     } catch (error) {
         console.error('2FA verification error:', error);

@@ -29,6 +29,15 @@ export const ConnectionStatus = {
 export type ConnectionStatus = (typeof ConnectionStatus)[keyof typeof ConnectionStatus]
 
 
+export const TwoFactorMethod = {
+  NONE: 'NONE',
+  TOTP: 'TOTP',
+  EMAIL: 'EMAIL'
+} as const
+
+export type TwoFactorMethod = (typeof TwoFactorMethod)[keyof typeof TwoFactorMethod]
+
+
 export const AuditAction = {
   USER_REGISTER: 'USER_REGISTER',
   USER_LOGIN: 'USER_LOGIN',
@@ -39,6 +48,9 @@ export const AuditAction = {
   USER_PASSWORD_CHANGED: 'USER_PASSWORD_CHANGED',
   USER_MASTER_KEY_SET: 'USER_MASTER_KEY_SET',
   USER_MASTER_KEY_REMOVED: 'USER_MASTER_KEY_REMOVED',
+  USER_RECOVERY_CODE_USED: 'USER_RECOVERY_CODE_USED',
+  USER_EMAIL_VERIFIED: 'USER_EMAIL_VERIFIED',
+  SERVER_CREDENTIAL_REVEALED: 'SERVER_CREDENTIAL_REVEALED',
   SESSION_CREATED: 'SESSION_CREATED',
   SESSION_REVOKED: 'SESSION_REVOKED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',

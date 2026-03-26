@@ -31,8 +31,23 @@ export interface SessionData {
 
 const SESSION_TTL = 60 * 60 * 24 * 7; // 7 days
 
+function getSessionSecret(): string {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret || secret.length < 32) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error(
+                'SESSION_SECRET must be set and at least 32 characters long. ' +
+                'Generate one with: openssl rand -base64 32'
+            );
+        }
+        // Dev fallback — never used in production
+        return 'dev-only-fallback-secret-at-least-32-chars!!';
+    }
+    return secret;
+}
+
 export const sessionOptions: SessionOptions = {
-    password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+    password: getSessionSecret(),
     cookieName: 'termo_session',
     cookieOptions: {
         secure: process.env.NODE_ENV === 'production',
@@ -210,10 +225,13 @@ export async function revokeAllUserSessions(
 }
 
 /**
- * Get all active sessions for a user
+ * Get all active sessions for a user.
+ * Pass the current session token so isCurrent is marked correctly.
  */
-export async function getUserSessions(userId: string) {
-    return prisma.session.findMany({
+export async function getUserSessions(userId: string, currentToken?: string) {
+    const currentTokenHash = currentToken ? hashToken(currentToken) : null;
+
+    const sessions = await prisma.session.findMany({
         where: {
             userId,
             isRevoked: false,
@@ -221,6 +239,7 @@ export async function getUserSessions(userId: string) {
         },
         select: {
             id: true,
+            tokenHash: true,
             deviceInfo: true,
             ipAddress: true,
             createdAt: true,
@@ -228,6 +247,11 @@ export async function getUserSessions(userId: string) {
         },
         orderBy: { lastActiveAt: 'desc' },
     });
+
+    return sessions.map(({ tokenHash, ...s }) => ({
+        ...s,
+        isCurrent: currentTokenHash ? tokenHash === currentTokenHash : false,
+    }));
 }
 
 /**

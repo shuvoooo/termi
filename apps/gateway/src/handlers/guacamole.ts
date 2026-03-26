@@ -1,8 +1,8 @@
 /**
  * Guacamole Protocol Handler for RDP and VNC connections
- * 
- * This handler directly communicates with the guacd daemon using
- * the Guacamole protocol over TCP sockets.
+ *
+ * Directly communicates with the guacd 1.5.x daemon (FreeRDP 2.x backend)
+ * using the Guacamole protocol over TCP sockets.
  */
 
 import { WebSocket } from 'ws';
@@ -58,6 +58,9 @@ export class GuacamoleHandler {
     private guacdSocket: Socket;
     private buffer: string = '';
     private closing = false;
+    // Callbacks used during the guacd protocol handshake phase
+    private handshakeResolve: ((args: string[]) => void) | null = null;
+    private handshakeReject: ((err: Error) => void) | null = null;
 
     constructor(ws: WebSocket, payload: TokenPayload, protocol: 'rdp' | 'vnc') {
         this.ws = ws;
@@ -75,6 +78,13 @@ export class GuacamoleHandler {
         this.guacdSocket.on('error', (err) => {
             console.error('[Guacamole] Socket error:', err.message);
             console.error('[Guacamole] Error details:', err);
+            if (this.handshakeReject) {
+                const reject = this.handshakeReject;
+                this.handshakeResolve = null;
+                this.handshakeReject = null;
+                reject(err);
+                return;
+            }
             this.sendError(`Guacamole error: ${err.message}`);
             if (this.ws.readyState === WebSocket.OPEN) {
                 this.ws.close();
@@ -82,8 +92,13 @@ export class GuacamoleHandler {
         });
 
         this.guacdSocket.on('close', () => {
-            console.log('[Guacamole] Connection closed');
-            if (!this.closing && this.ws.readyState === WebSocket.OPEN) {
+            console.log('[Guacamole] guacd socket closed');
+            if (this.buffer.length > 0) {
+                console.warn('[Guacamole] Unprocessed buffer on close (possible truncated error):', this.buffer.substring(0, 200));
+            }
+            if (this.closing) return; // Already handling shutdown
+            this.closing = true;
+            if (this.ws.readyState === WebSocket.OPEN) {
                 this.ws.send(JSON.stringify({ type: 'closed' }));
                 this.ws.close();
             }
@@ -92,22 +107,43 @@ export class GuacamoleHandler {
         this.guacdSocket.on('data', (data) => {
             this.buffer += data.toString();
 
-            // Process complete instructions
+            // Process all complete instructions in the buffer
             while (this.buffer.includes(';')) {
                 const endIndex = this.buffer.indexOf(';');
                 const instruction = this.buffer.substring(0, endIndex + 1);
                 this.buffer = this.buffer.substring(endIndex + 1);
 
-                // Log first few instructions for debugging
                 const parsed = parseInstruction(instruction);
-                if (parsed && ['args', 'ready', 'error', 'size', 'png', 'jpeg'].includes(parsed.opcode)) {
-                    console.log('[Guacamole] Instruction:', parsed.opcode, parsed.args.length > 0 ? `(${parsed.args.length} args)` : '');
+                if (parsed) {
+                    // Log notable instructions; log everything except high-frequency drawing ones
+                    if (!['png', 'jpeg', 'webp', 'blob', 'video', 'audio', 'mouse', 'nop', 'sync'].includes(parsed.opcode)) {
+                        console.log('[Guacamole] ←', parsed.opcode, parsed.args.length > 0 ? `(${parsed.args.length} args)` : '');
+                    }
                     if (parsed.opcode === 'error') {
-                        console.error('[Guacamole] Error instruction from guacd:', parsed.args);
+                        console.error('[Guacamole] guacd ERROR:', parsed.args);
                     }
                 }
 
-                // Forward instruction to WebSocket
+                // During the handshake phase, intercept args/error internally
+                // so they are not forwarded to the browser
+                if (parsed?.opcode === 'args' && this.handshakeResolve) {
+                    const resolve = this.handshakeResolve;
+                    this.handshakeResolve = null;
+                    this.handshakeReject = null;
+                    console.log('[Guacamole] guacd expects args:', parsed.args);
+                    resolve(parsed.args);
+                    continue; // Do NOT forward the internal handshake args to the browser
+                }
+
+                if (parsed?.opcode === 'error' && this.handshakeReject) {
+                    const reject = this.handshakeReject;
+                    this.handshakeResolve = null;
+                    this.handshakeReject = null;
+                    reject(new Error(`guacd error: ${parsed.args.join(' ')}`));
+                    continue;
+                }
+
+                // Forward all other instructions to the browser WebSocket
                 if (this.ws.readyState === WebSocket.OPEN) {
                     this.ws.send(instruction);
                 }
@@ -180,28 +216,25 @@ export class GuacamoleHandler {
         console.log(`[Guacamole] Sending select instruction: ${guacProtocol}`);
         this.guacdSocket.write(encodeInstruction('select', guacProtocol));
 
-        // Wait for args instruction and capture which args are expected
+        // Wait for the args instruction using the single buffered data handler
+        // (avoids the dual-listener race condition)
         let expectedArgs: string[];
         try {
             expectedArgs = await new Promise<string[]>((resolve, reject) => {
                 const timeout = setTimeout(() => {
+                    this.handshakeResolve = null;
+                    this.handshakeReject = null;
                     reject(new Error('Timeout waiting for args instruction from guacd'));
                 }, 5000);
 
-                const onData = (data: Buffer) => {
-                    const instruction = parseInstruction(data.toString());
-                    if (instruction?.opcode === 'args') {
-                        clearTimeout(timeout);
-                        this.guacdSocket.off('data', onData);
-                        console.log('[Guacamole] guacd expects args:', instruction.args);
-                        resolve(instruction.args);
-                    } else if (instruction?.opcode === 'error') {
-                        clearTimeout(timeout);
-                        this.guacdSocket.off('data', onData);
-                        reject(new Error(`guacd error: ${instruction.args.join(' ')}`));
-                    }
+                this.handshakeResolve = (args) => {
+                    clearTimeout(timeout);
+                    resolve(args);
                 };
-                this.guacdSocket.on('data', onData);
+                this.handshakeReject = (err) => {
+                    clearTimeout(timeout);
+                    reject(err);
+                };
             });
         } catch (err: any) {
             const errorMsg = `Failed to get args from guacd: ${err.message}`;
@@ -216,9 +249,6 @@ export class GuacamoleHandler {
 
         // Map of available parameter values
         const paramMap: Record<string, string> = {
-            // Version (guacd 1.5.0+)
-            'VERSION_1_5_0': 'VERSION_1_5_0',
-
             // Basic connection
             'hostname': payload.host,
             'port': String(payload.port || (protocol === 'rdp' ? 3389 : 5900)),
@@ -231,7 +261,9 @@ export class GuacamoleHandler {
             'width': String(payload.displayWidth || 1024),
             'height': String(payload.displayHeight || 768),
             'dpi': '96',
-            'color-depth': String(payload.colorDepth || 16),
+            // 32-bit color depth works well with FreeRDP 2.x (guacd 1.5.x).
+            // 16-bit can cause an immediate disconnect on some RDP servers.
+            'color-depth': String(payload.colorDepth || 32),
 
             // Audio
             'disable-audio': 'true',
@@ -249,9 +281,14 @@ export class GuacamoleHandler {
             'disable-upload': '',
 
             // RDP-specific settings
+            // 'any' tries NLA → TLS → RDP in order; works with most servers
             'security': 'any',
+            // ignore-cert: FreeRDP 2.x (guacd 1.5.x) cert bypass — skips all
+            // certificate validation so self-signed RDP certs are accepted.
             'ignore-cert': 'true',
-            'cert-tofu': '',
+            // cert-tofu: Trust-on-First-Use, also supported in guacd 1.5.x.
+            // Sent only if guacd lists it in its args; harmless otherwise.
+            'cert-tofu': 'true',
             'cert-fingerprints': '',
             'disable-auth': '',
             'server-layout': '',
@@ -278,7 +315,11 @@ export class GuacamoleHandler {
             'disable-bitmap-caching': 'false',
             'disable-offscreen-caching': 'false',
             'disable-glyph-caching': 'false',
-            'disable-gfx': '',
+            // Disable the GFX (Graphics Pipeline) virtual channel.
+            // FreeRDP 2.x (guacd 1.5.x) can fail silently when negotiating GFX
+            // with servers that don't fully support it; disabling forces the
+            // stable classic drawing-order path and improves compatibility.
+            'disable-gfx': 'true',
 
             // SFTP settings
             'enable-sftp': '',
@@ -334,10 +375,16 @@ export class GuacamoleHandler {
             'normalize-clipboard': '',
         };
 
-        // Send args in the order guacd expects
+        // Build the connect args in the order guacd expects.
+        // VERSION_x_x_x args (e.g. VERSION_1_5_0, VERSION_1_6_0) are echoed
+        // back verbatim so guacd picks the correct protocol version regardless
+        // of which guacd release is running.
         for (const arg of expectedArgs) {
-            const value = paramMap[arg] || '';
-            connectionArgs.push(value);
+            if (/^VERSION_/.test(arg)) {
+                connectionArgs.push(arg); // Echo the version identifier back
+            } else {
+                connectionArgs.push(paramMap[arg] ?? '');
+            }
         }
 
         console.log('[Guacamole] Sending', connectionArgs.length, 'args to guacd');

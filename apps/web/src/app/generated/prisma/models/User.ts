@@ -20,8 +20,18 @@ export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayloa
 
 export type AggregateUser = {
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
+}
+
+export type UserAvgAggregateOutputType = {
+  failedLoginCount: number | null
+}
+
+export type UserSumAggregateOutputType = {
+  failedLoginCount: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -30,10 +40,16 @@ export type UserMinAggregateOutputType = {
   passwordHash: string | null
   totpSecret: string | null
   totpEnabled: boolean | null
+  emailOtpEnabled: boolean | null
+  twoFactorMethod: $Enums.TwoFactorMethod | null
   masterKeyHash: string | null
   masterKeySalt: string | null
   isActive: boolean | null
   isVerified: boolean | null
+  emailVerificationToken: string | null
+  emailVerificationExpiresAt: Date | null
+  failedLoginCount: number | null
+  lockoutUntil: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   lastLoginAt: Date | null
@@ -45,10 +61,16 @@ export type UserMaxAggregateOutputType = {
   passwordHash: string | null
   totpSecret: string | null
   totpEnabled: boolean | null
+  emailOtpEnabled: boolean | null
+  twoFactorMethod: $Enums.TwoFactorMethod | null
   masterKeyHash: string | null
   masterKeySalt: string | null
   isActive: boolean | null
   isVerified: boolean | null
+  emailVerificationToken: string | null
+  emailVerificationExpiresAt: Date | null
+  failedLoginCount: number | null
+  lockoutUntil: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   lastLoginAt: Date | null
@@ -60,10 +82,16 @@ export type UserCountAggregateOutputType = {
   passwordHash: number
   totpSecret: number
   totpEnabled: number
+  emailOtpEnabled: number
+  twoFactorMethod: number
   masterKeyHash: number
   masterKeySalt: number
   isActive: number
   isVerified: number
+  emailVerificationToken: number
+  emailVerificationExpiresAt: number
+  failedLoginCount: number
+  lockoutUntil: number
   createdAt: number
   updatedAt: number
   lastLoginAt: number
@@ -71,16 +99,30 @@ export type UserCountAggregateOutputType = {
 }
 
 
+export type UserAvgAggregateInputType = {
+  failedLoginCount?: true
+}
+
+export type UserSumAggregateInputType = {
+  failedLoginCount?: true
+}
+
 export type UserMinAggregateInputType = {
   id?: true
   email?: true
   passwordHash?: true
   totpSecret?: true
   totpEnabled?: true
+  emailOtpEnabled?: true
+  twoFactorMethod?: true
   masterKeyHash?: true
   masterKeySalt?: true
   isActive?: true
   isVerified?: true
+  emailVerificationToken?: true
+  emailVerificationExpiresAt?: true
+  failedLoginCount?: true
+  lockoutUntil?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -92,10 +134,16 @@ export type UserMaxAggregateInputType = {
   passwordHash?: true
   totpSecret?: true
   totpEnabled?: true
+  emailOtpEnabled?: true
+  twoFactorMethod?: true
   masterKeyHash?: true
   masterKeySalt?: true
   isActive?: true
   isVerified?: true
+  emailVerificationToken?: true
+  emailVerificationExpiresAt?: true
+  failedLoginCount?: true
+  lockoutUntil?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -107,10 +155,16 @@ export type UserCountAggregateInputType = {
   passwordHash?: true
   totpSecret?: true
   totpEnabled?: true
+  emailOtpEnabled?: true
+  twoFactorMethod?: true
   masterKeyHash?: true
   masterKeySalt?: true
   isActive?: true
   isVerified?: true
+  emailVerificationToken?: true
+  emailVerificationExpiresAt?: true
+  failedLoginCount?: true
+  lockoutUntil?: true
   createdAt?: true
   updatedAt?: true
   lastLoginAt?: true
@@ -155,6 +209,18 @@ export type UserAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: UserAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: UserSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: UserMinAggregateInputType
@@ -185,6 +251,8 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: UserCountAggregateInputType | true
+  _avg?: UserAvgAggregateInputType
+  _sum?: UserSumAggregateInputType
   _min?: UserMinAggregateInputType
   _max?: UserMaxAggregateInputType
 }
@@ -195,14 +263,22 @@ export type UserGroupByOutputType = {
   passwordHash: string
   totpSecret: string | null
   totpEnabled: boolean
+  emailOtpEnabled: boolean
+  twoFactorMethod: $Enums.TwoFactorMethod
   masterKeyHash: string | null
   masterKeySalt: string | null
   isActive: boolean
   isVerified: boolean
+  emailVerificationToken: string | null
+  emailVerificationExpiresAt: Date | null
+  failedLoginCount: number
+  lockoutUntil: Date | null
   createdAt: Date
   updatedAt: Date
   lastLoginAt: Date | null
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
 }
@@ -231,10 +307,16 @@ export type UserWhereInput = {
   passwordHash?: Prisma.StringFilter<"User"> | string
   totpSecret?: Prisma.StringNullableFilter<"User"> | string | null
   totpEnabled?: Prisma.BoolFilter<"User"> | boolean
+  emailOtpEnabled?: Prisma.BoolFilter<"User"> | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFilter<"User"> | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.StringNullableFilter<"User"> | string | null
   masterKeySalt?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
   isVerified?: Prisma.BoolFilter<"User"> | boolean
+  emailVerificationToken?: Prisma.StringNullableFilter<"User"> | string | null
+  emailVerificationExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  failedLoginCount?: Prisma.IntFilter<"User"> | number
+  lockoutUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -242,6 +324,8 @@ export type UserWhereInput = {
   servers?: Prisma.ServerListRelationFilter
   serverGroups?: Prisma.ServerGroupListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
+  recoveryCodes?: Prisma.RecoveryCodeListRelationFilter
+  emailOTPs?: Prisma.EmailOTPListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -250,10 +334,16 @@ export type UserOrderByWithRelationInput = {
   passwordHash?: Prisma.SortOrder
   totpSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   totpEnabled?: Prisma.SortOrder
+  emailOtpEnabled?: Prisma.SortOrder
+  twoFactorMethod?: Prisma.SortOrder
   masterKeyHash?: Prisma.SortOrderInput | Prisma.SortOrder
   masterKeySalt?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
+  emailVerificationToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerificationExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  failedLoginCount?: Prisma.SortOrder
+  lockoutUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -261,6 +351,8 @@ export type UserOrderByWithRelationInput = {
   servers?: Prisma.ServerOrderByRelationAggregateInput
   serverGroups?: Prisma.ServerGroupOrderByRelationAggregateInput
   auditLogs?: Prisma.AuditLogOrderByRelationAggregateInput
+  recoveryCodes?: Prisma.RecoveryCodeOrderByRelationAggregateInput
+  emailOTPs?: Prisma.EmailOTPOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -272,10 +364,16 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   passwordHash?: Prisma.StringFilter<"User"> | string
   totpSecret?: Prisma.StringNullableFilter<"User"> | string | null
   totpEnabled?: Prisma.BoolFilter<"User"> | boolean
+  emailOtpEnabled?: Prisma.BoolFilter<"User"> | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFilter<"User"> | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.StringNullableFilter<"User"> | string | null
   masterKeySalt?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
   isVerified?: Prisma.BoolFilter<"User"> | boolean
+  emailVerificationToken?: Prisma.StringNullableFilter<"User"> | string | null
+  emailVerificationExpiresAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
+  failedLoginCount?: Prisma.IntFilter<"User"> | number
+  lockoutUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -283,6 +381,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   servers?: Prisma.ServerListRelationFilter
   serverGroups?: Prisma.ServerGroupListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
+  recoveryCodes?: Prisma.RecoveryCodeListRelationFilter
+  emailOTPs?: Prisma.EmailOTPListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -291,16 +391,24 @@ export type UserOrderByWithAggregationInput = {
   passwordHash?: Prisma.SortOrder
   totpSecret?: Prisma.SortOrderInput | Prisma.SortOrder
   totpEnabled?: Prisma.SortOrder
+  emailOtpEnabled?: Prisma.SortOrder
+  twoFactorMethod?: Prisma.SortOrder
   masterKeyHash?: Prisma.SortOrderInput | Prisma.SortOrder
   masterKeySalt?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
+  emailVerificationToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  emailVerificationExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  failedLoginCount?: Prisma.SortOrder
+  lockoutUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
+  _avg?: Prisma.UserAvgOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
+  _sum?: Prisma.UserSumOrderByAggregateInput
 }
 
 export type UserScalarWhereWithAggregatesInput = {
@@ -312,10 +420,16 @@ export type UserScalarWhereWithAggregatesInput = {
   passwordHash?: Prisma.StringWithAggregatesFilter<"User"> | string
   totpSecret?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   totpEnabled?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  emailOtpEnabled?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodWithAggregatesFilter<"User"> | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   masterKeySalt?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   isVerified?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  emailVerificationToken?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  emailVerificationExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+  failedLoginCount?: Prisma.IntWithAggregatesFilter<"User"> | number
+  lockoutUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -327,10 +441,16 @@ export type UserCreateInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -338,6 +458,8 @@ export type UserCreateInput = {
   servers?: Prisma.ServerCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -346,10 +468,16 @@ export type UserUncheckedCreateInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -357,6 +485,8 @@ export type UserUncheckedCreateInput = {
   servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -365,10 +495,16 @@ export type UserUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -376,6 +512,8 @@ export type UserUpdateInput = {
   servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -384,10 +522,16 @@ export type UserUncheckedUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -395,6 +539,8 @@ export type UserUncheckedUpdateInput = {
   servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -403,10 +549,16 @@ export type UserCreateManyInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
@@ -418,10 +570,16 @@ export type UserUpdateManyMutationInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -433,10 +591,16 @@ export type UserUncheckedUpdateManyInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -448,13 +612,23 @@ export type UserCountOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   totpSecret?: Prisma.SortOrder
   totpEnabled?: Prisma.SortOrder
+  emailOtpEnabled?: Prisma.SortOrder
+  twoFactorMethod?: Prisma.SortOrder
   masterKeyHash?: Prisma.SortOrder
   masterKeySalt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
+  emailVerificationToken?: Prisma.SortOrder
+  emailVerificationExpiresAt?: Prisma.SortOrder
+  failedLoginCount?: Prisma.SortOrder
+  lockoutUntil?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
+}
+
+export type UserAvgOrderByAggregateInput = {
+  failedLoginCount?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -463,10 +637,16 @@ export type UserMaxOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   totpSecret?: Prisma.SortOrder
   totpEnabled?: Prisma.SortOrder
+  emailOtpEnabled?: Prisma.SortOrder
+  twoFactorMethod?: Prisma.SortOrder
   masterKeyHash?: Prisma.SortOrder
   masterKeySalt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
+  emailVerificationToken?: Prisma.SortOrder
+  emailVerificationExpiresAt?: Prisma.SortOrder
+  failedLoginCount?: Prisma.SortOrder
+  lockoutUntil?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
@@ -478,13 +658,23 @@ export type UserMinOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   totpSecret?: Prisma.SortOrder
   totpEnabled?: Prisma.SortOrder
+  emailOtpEnabled?: Prisma.SortOrder
+  twoFactorMethod?: Prisma.SortOrder
   masterKeyHash?: Prisma.SortOrder
   masterKeySalt?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isVerified?: Prisma.SortOrder
+  emailVerificationToken?: Prisma.SortOrder
+  emailVerificationExpiresAt?: Prisma.SortOrder
+  failedLoginCount?: Prisma.SortOrder
+  lockoutUntil?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
+}
+
+export type UserSumOrderByAggregateInput = {
+  failedLoginCount?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -509,12 +699,24 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
+export type EnumTwoFactorMethodFieldUpdateOperationsInput = {
+  set?: $Enums.TwoFactorMethod
 }
 
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type UserCreateNestedOneWithoutSessionsInput = {
@@ -575,22 +777,58 @@ export type UserUpdateOneWithoutAuditLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAuditLogsInput, Prisma.UserUpdateWithoutAuditLogsInput>, Prisma.UserUncheckedUpdateWithoutAuditLogsInput>
 }
 
+export type UserCreateNestedOneWithoutRecoveryCodesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRecoveryCodesInput, Prisma.UserUncheckedCreateWithoutRecoveryCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecoveryCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutRecoveryCodesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRecoveryCodesInput, Prisma.UserUncheckedCreateWithoutRecoveryCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecoveryCodesInput
+  upsert?: Prisma.UserUpsertWithoutRecoveryCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRecoveryCodesInput, Prisma.UserUpdateWithoutRecoveryCodesInput>, Prisma.UserUncheckedUpdateWithoutRecoveryCodesInput>
+}
+
+export type UserCreateNestedOneWithoutEmailOTPsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEmailOTPsInput, Prisma.UserUncheckedCreateWithoutEmailOTPsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEmailOTPsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutEmailOTPsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEmailOTPsInput, Prisma.UserUncheckedCreateWithoutEmailOTPsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEmailOTPsInput
+  upsert?: Prisma.UserUpsertWithoutEmailOTPsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutEmailOTPsInput, Prisma.UserUpdateWithoutEmailOTPsInput>, Prisma.UserUncheckedUpdateWithoutEmailOTPsInput>
+}
+
 export type UserCreateWithoutSessionsInput = {
   id?: string
   email: string
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   servers?: Prisma.ServerCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -599,16 +837,24 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -633,16 +879,24 @@ export type UserUpdateWithoutSessionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -651,16 +905,24 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutServerGroupsInput = {
@@ -669,16 +931,24 @@ export type UserCreateWithoutServerGroupsInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   servers?: Prisma.ServerCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutServerGroupsInput = {
@@ -687,16 +957,24 @@ export type UserUncheckedCreateWithoutServerGroupsInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutServerGroupsInput = {
@@ -721,16 +999,24 @@ export type UserUpdateWithoutServerGroupsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutServerGroupsInput = {
@@ -739,16 +1025,24 @@ export type UserUncheckedUpdateWithoutServerGroupsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutServersInput = {
@@ -757,16 +1051,24 @@ export type UserCreateWithoutServersInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutServersInput = {
@@ -775,16 +1077,24 @@ export type UserUncheckedCreateWithoutServersInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutServersInput = {
@@ -809,16 +1119,24 @@ export type UserUpdateWithoutServersInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutServersInput = {
@@ -827,16 +1145,24 @@ export type UserUncheckedUpdateWithoutServersInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAuditLogsInput = {
@@ -845,16 +1171,24 @@ export type UserCreateWithoutAuditLogsInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   servers?: Prisma.ServerCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -863,16 +1197,24 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   passwordHash: string
   totpSecret?: string | null
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
   masterKeyHash?: string | null
   masterKeySalt?: string | null
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   lastLoginAt?: Date | string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
   serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -897,16 +1239,24 @@ export type UserUpdateWithoutAuditLogsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -915,16 +1265,264 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
   masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
   serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutRecoveryCodesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  totpSecret?: string | null
+  totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
+  masterKeyHash?: string | null
+  masterKeySalt?: string | null
+  isActive?: boolean
+  isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  servers?: Prisma.ServerCreateNestedManyWithoutUserInput
+  serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutRecoveryCodesInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  totpSecret?: string | null
+  totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
+  masterKeyHash?: string | null
+  masterKeySalt?: string | null
+  isActive?: boolean
+  isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
+  serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  emailOTPs?: Prisma.EmailOTPUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutRecoveryCodesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutRecoveryCodesInput, Prisma.UserUncheckedCreateWithoutRecoveryCodesInput>
+}
+
+export type UserUpsertWithoutRecoveryCodesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutRecoveryCodesInput, Prisma.UserUncheckedUpdateWithoutRecoveryCodesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutRecoveryCodesInput, Prisma.UserUncheckedCreateWithoutRecoveryCodesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutRecoveryCodesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutRecoveryCodesInput, Prisma.UserUncheckedUpdateWithoutRecoveryCodesInput>
+}
+
+export type UserUpdateWithoutRecoveryCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
+  masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
+  serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutRecoveryCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
+  masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
+  serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  emailOTPs?: Prisma.EmailOTPUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutEmailOTPsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  totpSecret?: string | null
+  totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
+  masterKeyHash?: string | null
+  masterKeySalt?: string | null
+  isActive?: boolean
+  isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  servers?: Prisma.ServerCreateNestedManyWithoutUserInput
+  serverGroups?: Prisma.ServerGroupCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutEmailOTPsInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  totpSecret?: string | null
+  totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: $Enums.TwoFactorMethod
+  masterKeyHash?: string | null
+  masterKeySalt?: string | null
+  isActive?: boolean
+  isVerified?: boolean
+  emailVerificationToken?: string | null
+  emailVerificationExpiresAt?: Date | string | null
+  failedLoginCount?: number
+  lockoutUntil?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  servers?: Prisma.ServerUncheckedCreateNestedManyWithoutUserInput
+  serverGroups?: Prisma.ServerGroupUncheckedCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutUserInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutEmailOTPsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutEmailOTPsInput, Prisma.UserUncheckedCreateWithoutEmailOTPsInput>
+}
+
+export type UserUpsertWithoutEmailOTPsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutEmailOTPsInput, Prisma.UserUncheckedUpdateWithoutEmailOTPsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutEmailOTPsInput, Prisma.UserUncheckedCreateWithoutEmailOTPsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutEmailOTPsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutEmailOTPsInput, Prisma.UserUncheckedUpdateWithoutEmailOTPsInput>
+}
+
+export type UserUpdateWithoutEmailOTPsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
+  masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  servers?: Prisma.ServerUpdateManyWithoutUserNestedInput
+  serverGroups?: Prisma.ServerGroupUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutEmailOTPsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  totpSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  totpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailOtpEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twoFactorMethod?: Prisma.EnumTwoFactorMethodFieldUpdateOperationsInput | $Enums.TwoFactorMethod
+  masterKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  masterKeySalt?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  emailVerificationToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  emailVerificationExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedLoginCount?: Prisma.IntFieldUpdateOperationsInput | number
+  lockoutUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  servers?: Prisma.ServerUncheckedUpdateManyWithoutUserNestedInput
+  serverGroups?: Prisma.ServerGroupUncheckedUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutUserNestedInput
+  recoveryCodes?: Prisma.RecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -937,6 +1535,8 @@ export type UserCountOutputType = {
   servers: number
   serverGroups: number
   auditLogs: number
+  recoveryCodes: number
+  emailOTPs: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -944,6 +1544,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   servers?: boolean | UserCountOutputTypeCountServersArgs
   serverGroups?: boolean | UserCountOutputTypeCountServerGroupsArgs
   auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
+  recoveryCodes?: boolean | UserCountOutputTypeCountRecoveryCodesArgs
+  emailOTPs?: boolean | UserCountOutputTypeCountEmailOTPsArgs
 }
 
 /**
@@ -984,6 +1586,20 @@ export type UserCountOutputTypeCountAuditLogsArgs<ExtArgs extends runtime.Types.
   where?: Prisma.AuditLogWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountRecoveryCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecoveryCodeWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountEmailOTPsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EmailOTPWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -991,10 +1607,16 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   passwordHash?: boolean
   totpSecret?: boolean
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: boolean
   masterKeyHash?: boolean
   masterKeySalt?: boolean
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: boolean
+  emailVerificationExpiresAt?: boolean
+  failedLoginCount?: boolean
+  lockoutUntil?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -1002,6 +1624,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   servers?: boolean | Prisma.User$serversArgs<ExtArgs>
   serverGroups?: boolean | Prisma.User$serverGroupsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
+  recoveryCodes?: boolean | Prisma.User$recoveryCodesArgs<ExtArgs>
+  emailOTPs?: boolean | Prisma.User$emailOTPsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1011,10 +1635,16 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   totpSecret?: boolean
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: boolean
   masterKeyHash?: boolean
   masterKeySalt?: boolean
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: boolean
+  emailVerificationExpiresAt?: boolean
+  failedLoginCount?: boolean
+  lockoutUntil?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -1026,10 +1656,16 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   totpSecret?: boolean
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: boolean
   masterKeyHash?: boolean
   masterKeySalt?: boolean
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: boolean
+  emailVerificationExpiresAt?: boolean
+  failedLoginCount?: boolean
+  lockoutUntil?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
@@ -1041,21 +1677,29 @@ export type UserSelectScalar = {
   passwordHash?: boolean
   totpSecret?: boolean
   totpEnabled?: boolean
+  emailOtpEnabled?: boolean
+  twoFactorMethod?: boolean
   masterKeyHash?: boolean
   masterKeySalt?: boolean
   isActive?: boolean
   isVerified?: boolean
+  emailVerificationToken?: boolean
+  emailVerificationExpiresAt?: boolean
+  failedLoginCount?: boolean
+  lockoutUntil?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   lastLoginAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "totpSecret" | "totpEnabled" | "masterKeyHash" | "masterKeySalt" | "isActive" | "isVerified" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "totpSecret" | "totpEnabled" | "emailOtpEnabled" | "twoFactorMethod" | "masterKeyHash" | "masterKeySalt" | "isActive" | "isVerified" | "emailVerificationToken" | "emailVerificationExpiresAt" | "failedLoginCount" | "lockoutUntil" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   servers?: boolean | Prisma.User$serversArgs<ExtArgs>
   serverGroups?: boolean | Prisma.User$serverGroupsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
+  recoveryCodes?: boolean | Prisma.User$recoveryCodesArgs<ExtArgs>
+  emailOTPs?: boolean | Prisma.User$emailOTPsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1068,6 +1712,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     servers: Prisma.$ServerPayload<ExtArgs>[]
     serverGroups: Prisma.$ServerGroupPayload<ExtArgs>[]
     auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
+    recoveryCodes: Prisma.$RecoveryCodePayload<ExtArgs>[]
+    emailOTPs: Prisma.$EmailOTPPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1075,10 +1721,16 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     passwordHash: string
     totpSecret: string | null
     totpEnabled: boolean
+    emailOtpEnabled: boolean
+    twoFactorMethod: $Enums.TwoFactorMethod
     masterKeyHash: string | null
     masterKeySalt: string | null
     isActive: boolean
     isVerified: boolean
+    emailVerificationToken: string | null
+    emailVerificationExpiresAt: Date | null
+    failedLoginCount: number
+    lockoutUntil: Date | null
     createdAt: Date
     updatedAt: Date
     lastLoginAt: Date | null
@@ -1480,6 +2132,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   servers<T extends Prisma.User$serversArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$serversArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   serverGroups<T extends Prisma.User$serverGroupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$serverGroupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServerGroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditLogs<T extends Prisma.User$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  recoveryCodes<T extends Prisma.User$recoveryCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$recoveryCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecoveryCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  emailOTPs<T extends Prisma.User$emailOTPsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailOTPsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailOTPPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1514,10 +2168,16 @@ export interface UserFieldRefs {
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
   readonly totpSecret: Prisma.FieldRef<"User", 'String'>
   readonly totpEnabled: Prisma.FieldRef<"User", 'Boolean'>
+  readonly emailOtpEnabled: Prisma.FieldRef<"User", 'Boolean'>
+  readonly twoFactorMethod: Prisma.FieldRef<"User", 'TwoFactorMethod'>
   readonly masterKeyHash: Prisma.FieldRef<"User", 'String'>
   readonly masterKeySalt: Prisma.FieldRef<"User", 'String'>
   readonly isActive: Prisma.FieldRef<"User", 'Boolean'>
   readonly isVerified: Prisma.FieldRef<"User", 'Boolean'>
+  readonly emailVerificationToken: Prisma.FieldRef<"User", 'String'>
+  readonly emailVerificationExpiresAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly failedLoginCount: Prisma.FieldRef<"User", 'Int'>
+  readonly lockoutUntil: Prisma.FieldRef<"User", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly lastLoginAt: Prisma.FieldRef<"User", 'DateTime'>
@@ -2007,6 +2667,54 @@ export type User$auditLogsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.AuditLogScalarFieldEnum | Prisma.AuditLogScalarFieldEnum[]
+}
+
+/**
+ * User.recoveryCodes
+ */
+export type User$recoveryCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RecoveryCode
+   */
+  select?: Prisma.RecoveryCodeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RecoveryCode
+   */
+  omit?: Prisma.RecoveryCodeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecoveryCodeInclude<ExtArgs> | null
+  where?: Prisma.RecoveryCodeWhereInput
+  orderBy?: Prisma.RecoveryCodeOrderByWithRelationInput | Prisma.RecoveryCodeOrderByWithRelationInput[]
+  cursor?: Prisma.RecoveryCodeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecoveryCodeScalarFieldEnum | Prisma.RecoveryCodeScalarFieldEnum[]
+}
+
+/**
+ * User.emailOTPs
+ */
+export type User$emailOTPsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EmailOTP
+   */
+  select?: Prisma.EmailOTPSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EmailOTP
+   */
+  omit?: Prisma.EmailOTPOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmailOTPInclude<ExtArgs> | null
+  where?: Prisma.EmailOTPWhereInput
+  orderBy?: Prisma.EmailOTPOrderByWithRelationInput | Prisma.EmailOTPOrderByWithRelationInput[]
+  cursor?: Prisma.EmailOTPWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EmailOTPScalarFieldEnum | Prisma.EmailOTPScalarFieldEnum[]
 }
 
 /**

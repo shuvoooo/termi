@@ -19,7 +19,10 @@ export async function GET() {
                 id: user.id,
                 email: user.email,
                 totpEnabled: user.totpEnabled,
+                emailOtpEnabled: user.emailOtpEnabled,
+                twoFactorMethod: user.twoFactorMethod,
                 hasMasterKey: !!user.masterKeyHash,
+                isVerified: user.isVerified,
                 createdAt: user.createdAt,
             },
         });

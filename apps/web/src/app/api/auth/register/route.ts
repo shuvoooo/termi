@@ -5,11 +5,14 @@
 
 import { z } from 'zod';
 import { registerUser } from '@/lib/auth';
+import { sendVerificationEmail } from '@/lib/auth/email-verification';
 import {
     validateBody,
     successResponse,
-    errorResponse
+    errorResponse,
+    getClientIP,
 } from '@/lib/api';
+import { registerRateLimit } from '@/lib/rate-limit';
 
 const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -24,6 +27,13 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request) {
+    const ipAddress = getClientIP(request);
+
+    const rl = registerRateLimit(ipAddress);
+    if (!rl.allowed) {
+        return errorResponse('Too many registration attempts. Please try again later.', 429);
+    }
+
     const validation = await validateBody(request, registerSchema);
 
     if ('error' in validation) {
@@ -39,10 +49,17 @@ export async function POST(request: Request) {
             return errorResponse(result.error || 'Registration failed');
         }
 
-        return successResponse({
-            message: 'Account created successfully',
-            userId: result.userId,
-        }, 201);
+        // Send verification email (non-blocking)
+        if (result.userId) {
+            sendVerificationEmail(result.userId, email).catch((err) =>
+                console.error('Failed to send verification email:', err)
+            );
+        }
+
+        return successResponse(
+            { message: 'Account created successfully. Please verify your email.', userId: result.userId },
+            201
+        );
     } catch (error) {
         console.error('Registration error:', error);
         return errorResponse('An error occurred during registration', 500);

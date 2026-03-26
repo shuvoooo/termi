@@ -14,20 +14,33 @@ datasource db {
 model User {
   id           String @id @default(cuid())
   email        String @unique
-  passwordHash String // Argon2id hash
+  passwordHash String // scrypt hash
 
   // TOTP 2FA
   totpSecret  String? // Encrypted TOTP secret
   totpEnabled Boolean @default(false)
 
+  // Email OTP 2FA
+  emailOtpEnabled Boolean @default(false)
+
+  // 2FA method preference
+  twoFactorMethod TwoFactorMethod @default(NONE)
+
   // Optional master key for additional encryption layer
-  // When set, all credentials are encrypted with user's master key
-  masterKeyHash String? // Hash of derived key for verification
-  masterKeySalt String? // Salt used for key derivation
+  masterKeyHash String?
+  masterKeySalt String?
 
   // Account status
   isActive   Boolean @default(true)
   isVerified Boolean @default(false)
+
+  // Email verification
+  emailVerificationToken     String?
+  emailVerificationExpiresAt DateTime?
+
+  // Brute-force protection
+  failedLoginCount Int       @default(0)
+  lockoutUntil     DateTime?
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -35,10 +48,12 @@ model User {
   lastLoginAt DateTime?
 
   // Relations
-  sessions     Session[]
-  servers      Server[]
-  serverGroups ServerGroup[]
-  auditLogs    AuditLog[]
+  sessions      Session[]
+  servers       Server[]
+  serverGroups  ServerGroup[]
+  auditLogs     AuditLog[]
+  recoveryCodes RecoveryCode[]
+  emailOTPs     EmailOTP[]
 
   @@index([email])
 }
@@ -223,6 +238,12 @@ enum ConnectionStatus {
   FAILED
 }
 
+enum TwoFactorMethod {
+  NONE
+  TOTP
+  EMAIL
+}
+
 enum AuditAction {
   // Auth events
   USER_REGISTER
@@ -234,6 +255,9 @@ enum AuditAction {
   USER_PASSWORD_CHANGED
   USER_MASTER_KEY_SET
   USER_MASTER_KEY_REMOVED
+  USER_RECOVERY_CODE_USED
+  USER_EMAIL_VERIFIED
+  SERVER_CREDENTIAL_REVEALED
 
   // Session events
   SESSION_CREATED
@@ -254,4 +278,38 @@ enum AuditAction {
   GROUP_CREATED
   GROUP_UPDATED
   GROUP_DELETED
+}
+
+// ============================================================================
+// RECOVERY CODES
+// ============================================================================
+
+model RecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String // scrypt hash of the code
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// EMAIL OTP
+// ============================================================================
+
+model EmailOTP {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String // scrypt hash of the 6-digit OTP
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

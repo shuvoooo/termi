@@ -389,7 +389,9 @@ export const ModelName = {
   ServerGroup: 'ServerGroup',
   Server: 'Server',
   Connection: 'Connection',
-  AuditLog: 'AuditLog'
+  AuditLog: 'AuditLog',
+  RecoveryCode: 'RecoveryCode',
+  EmailOTP: 'EmailOTP'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -405,7 +407,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "serverGroup" | "server" | "connection" | "auditLog"
+    modelProps: "user" | "session" | "serverGroup" | "server" | "connection" | "auditLog" | "recoveryCode" | "emailOTP"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -853,6 +855,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RecoveryCode: {
+      payload: Prisma.$RecoveryCodePayload<ExtArgs>
+      fields: Prisma.RecoveryCodeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RecoveryCodeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RecoveryCodeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        findFirst: {
+          args: Prisma.RecoveryCodeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RecoveryCodeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        findMany: {
+          args: Prisma.RecoveryCodeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>[]
+        }
+        create: {
+          args: Prisma.RecoveryCodeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        createMany: {
+          args: Prisma.RecoveryCodeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RecoveryCodeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>[]
+        }
+        delete: {
+          args: Prisma.RecoveryCodeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        update: {
+          args: Prisma.RecoveryCodeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        deleteMany: {
+          args: Prisma.RecoveryCodeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RecoveryCodeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RecoveryCodeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>[]
+        }
+        upsert: {
+          args: Prisma.RecoveryCodeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecoveryCodePayload>
+        }
+        aggregate: {
+          args: Prisma.RecoveryCodeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRecoveryCode>
+        }
+        groupBy: {
+          args: Prisma.RecoveryCodeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecoveryCodeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RecoveryCodeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecoveryCodeCountAggregateOutputType> | number
+        }
+      }
+    }
+    EmailOTP: {
+      payload: Prisma.$EmailOTPPayload<ExtArgs>
+      fields: Prisma.EmailOTPFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailOTPFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailOTPFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        findFirst: {
+          args: Prisma.EmailOTPFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailOTPFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        findMany: {
+          args: Prisma.EmailOTPFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>[]
+        }
+        create: {
+          args: Prisma.EmailOTPCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        createMany: {
+          args: Prisma.EmailOTPCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailOTPCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>[]
+        }
+        delete: {
+          args: Prisma.EmailOTPDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        update: {
+          args: Prisma.EmailOTPUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailOTPDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailOTPUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailOTPUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailOTPUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailOTPPayload>
+        }
+        aggregate: {
+          args: Prisma.EmailOTPAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailOTP>
+        }
+        groupBy: {
+          args: Prisma.EmailOTPGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailOTPGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailOTPCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailOTPCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -898,10 +1048,16 @@ export const UserScalarFieldEnum = {
   passwordHash: 'passwordHash',
   totpSecret: 'totpSecret',
   totpEnabled: 'totpEnabled',
+  emailOtpEnabled: 'emailOtpEnabled',
+  twoFactorMethod: 'twoFactorMethod',
   masterKeyHash: 'masterKeyHash',
   masterKeySalt: 'masterKeySalt',
   isActive: 'isActive',
   isVerified: 'isVerified',
+  emailVerificationToken: 'emailVerificationToken',
+  emailVerificationExpiresAt: 'emailVerificationExpiresAt',
+  failedLoginCount: 'failedLoginCount',
+  lockoutUntil: 'lockoutUntil',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'
@@ -1003,6 +1159,30 @@ export const AuditLogScalarFieldEnum = {
 export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
 
 
+export const RecoveryCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  codeHash: 'codeHash',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RecoveryCodeScalarFieldEnum = (typeof RecoveryCodeScalarFieldEnum)[keyof typeof RecoveryCodeScalarFieldEnum]
+
+
+export const EmailOTPScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  codeHash: 'codeHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  ipAddress: 'ipAddress',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailOTPScalarFieldEnum = (typeof EmailOTPScalarFieldEnum)[keyof typeof EmailOTPScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1068,6 +1248,20 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'TwoFactorMethod'
+ */
+export type EnumTwoFactorMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TwoFactorMethod'>
+    
+
+
+/**
+ * Reference to a field of type 'TwoFactorMethod[]'
+ */
+export type ListEnumTwoFactorMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TwoFactorMethod[]'>
     
 
 
@@ -1283,6 +1477,8 @@ export type GlobalOmitConfig = {
   server?: Prisma.ServerOmit
   connection?: Prisma.ConnectionOmit
   auditLog?: Prisma.AuditLogOmit
+  recoveryCode?: Prisma.RecoveryCodeOmit
+  emailOTP?: Prisma.EmailOTPOmit
 }
 
 /* Types for Logging */

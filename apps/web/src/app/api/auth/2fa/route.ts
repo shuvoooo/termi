@@ -1,41 +1,34 @@
 /**
- * GET /api/auth/2fa/setup - Generate TOTP setup
- * POST /api/auth/2fa/enable - Enable 2FA
- * POST /api/auth/2fa/disable - Disable 2FA
+ * GET  /api/auth/2fa/setup       - Generate TOTP setup data
+ * POST /api/auth/2fa/enable      - Enable TOTP 2FA (returns recovery codes)
+ * POST /api/auth/2fa/enable-email - Enable email OTP 2FA
+ * DELETE /api/auth/2fa           - Disable 2FA
  */
 
 import { z } from 'zod';
-import { getCurrentUser, enable2FA, disable2FA } from '@/lib/auth';
+import { getCurrentUser, enable2FA, disable2FA, enableEmailOTP } from '@/lib/auth';
 import { generateTOTPSecret } from '@/lib/auth/totp';
 import { validateBody, successResponse, errorResponse, unauthorizedResponse } from '@/lib/api';
 
 // GET - Generate TOTP setup (QR code and secret)
 export async function GET() {
     const user = await getCurrentUser();
-
-    if (!user) {
-        return unauthorizedResponse();
-    }
+    if (!user) return unauthorizedResponse();
 
     if (user.totpEnabled) {
-        return errorResponse('2FA is already enabled', 400);
+        return errorResponse('Authenticator app 2FA is already enabled', 400);
     }
 
     try {
         const { secret, uri, qrCode } = await generateTOTPSecret(user.email);
-
-        return successResponse({
-            secret,
-            uri,
-            qrCode,
-        });
+        return successResponse({ secret, uri, qrCode });
     } catch (error) {
         console.error('2FA setup error:', error);
         return errorResponse('Failed to generate 2FA setup', 500);
     }
 }
 
-// POST - Enable 2FA
+// POST - Enable TOTP 2FA
 const enableSchema = z.object({
     secret: z.string(),
     code: z.string().length(6),
@@ -43,16 +36,10 @@ const enableSchema = z.object({
 
 export async function POST(request: Request) {
     const user = await getCurrentUser();
-
-    if (!user) {
-        return unauthorizedResponse();
-    }
+    if (!user) return unauthorizedResponse();
 
     const validation = await validateBody(request, enableSchema);
-
-    if ('error' in validation) {
-        return validation.error;
-    }
+    if ('error' in validation) return validation.error;
 
     const { secret, code } = validation.data;
 
@@ -64,7 +51,8 @@ export async function POST(request: Request) {
         }
 
         return successResponse({
-            message: '2FA enabled successfully',
+            message: '2FA enabled successfully. Save these recovery codes – they will not be shown again.',
+            recoveryCodes: result.recoveryCodes,
         });
     } catch (error) {
         console.error('Enable 2FA error:', error);
@@ -79,16 +67,10 @@ const disableSchema = z.object({
 
 export async function DELETE(request: Request) {
     const user = await getCurrentUser();
-
-    if (!user) {
-        return unauthorizedResponse();
-    }
+    if (!user) return unauthorizedResponse();
 
     const validation = await validateBody(request, disableSchema);
-
-    if ('error' in validation) {
-        return validation.error;
-    }
+    if ('error' in validation) return validation.error;
 
     const { password } = validation.data;
 
@@ -99,9 +81,7 @@ export async function DELETE(request: Request) {
             return errorResponse(result.error || 'Failed to disable 2FA', 400);
         }
 
-        return successResponse({
-            message: '2FA disabled successfully',
-        });
+        return successResponse({ message: '2FA disabled successfully' });
     } catch (error) {
         console.error('Disable 2FA error:', error);
         return errorResponse('Failed to disable 2FA', 500);

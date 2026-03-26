@@ -1,29 +1,8 @@
-# Termo - Complete Docker Compose Stack
-# This file defines all services needed to run Termo
-
-version: '3.8'
+# Termi - Docker Compose Stack (Dokploy Compatible)
+# Database is managed externally — provide DATABASE_URL via environment/env file
+# Routing is handled by Traefik (Dokploy built-in)
 
 services:
-  # ==========================================================================
-  # PostgreSQL Database
-  # ==========================================================================
-  postgres:
-    image: postgres:16-alpine
-    container_name: termo-db
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: termo
-      POSTGRES_USER: ${POSTGRES_USER:-termo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-termo}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - termo-network
 
   # ==========================================================================
   # Redis for Session Cache
@@ -48,14 +27,14 @@ services:
   # Provides RDP and VNC proxy functionality
   # ==========================================================================
   guacd:
-    image: guacamole/guacd:1.5.4
+    image: guacamole/guacd:1.5.5
     container_name: termo-guacd
     restart: unless-stopped
     networks:
       - termo-network
 
   # ==========================================================================
-  # Termo Web Application (Next.js)
+  # Termi Web Application (Next.js)
   # ==========================================================================
   web:
     build:
@@ -64,31 +43,39 @@ services:
     container_name: termo-web
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-termo}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/termo?schema=public
-      
       # Session & Encryption
       SESSION_SECRET: ${SESSION_SECRET:-change-this-to-a-long-random-string}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-generate-with-openssl-rand-base64-32}
-      
+
       # Gateway
       GATEWAY_JWT_SECRET: ${GATEWAY_JWT_SECRET:-gateway-secret-change-this}
-      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_URL:-ws://localhost:8080}
-      
+      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_URL:-wss://gateway.example.com}
+
       # Other
       NODE_ENV: production
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.termi-web-http.rule=Host(`${WEB_DOMAIN}`)"
+      - "traefik.http.routers.termi-web-http.entrypoints=web"
+      - "traefik.http.routers.termi-web-http.middlewares=redirect-to-https"
+      # HTTPS
+      - "traefik.http.routers.termi-web.rule=Host(`${WEB_DOMAIN}`)"
+      - "traefik.http.routers.termi-web.entrypoints=websecure"
+      - "traefik.http.routers.termi-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.termi-web.loadbalancer.server.port=3000"
+      # Shared redirect middleware
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
       - termo-network
+      - dokploy-network
 
   # ==========================================================================
-  # Termo Gateway (WebSocket Proxy)
+  # Termi Gateway (WebSocket Proxy)
   # ==========================================================================
   gateway:
     build:
@@ -103,40 +90,33 @@ services:
       GATEWAY_PORT: 8080
       GATEWAY_HOST: 0.0.0.0
       GATEWAY_JWT_SECRET: ${GATEWAY_JWT_SECRET:-gateway-secret-change-this}
-      
+
       # Guacd Connection
       GUACD_HOST: guacd
       GUACD_PORT: 4822
-      
+
       NODE_ENV: production
-    ports:
-      - "${GATEWAY_PORT:-8080}:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.termi-gateway-http.rule=Host(`${GATEWAY_DOMAIN}`)"
+      - "traefik.http.routers.termi-gateway-http.entrypoints=web"
+      - "traefik.http.routers.termi-gateway-http.middlewares=redirect-to-https"
+      # HTTPS + WebSocket
+      - "traefik.http.routers.termi-gateway.rule=Host(`${GATEWAY_DOMAIN}`)"
+      - "traefik.http.routers.termi-gateway.entrypoints=websecure"
+      - "traefik.http.routers.termi-gateway.tls.certresolver=letsencrypt"
+      - "traefik.http.services.termi-gateway.loadbalancer.server.port=8080"
     networks:
       - termo-network
-
-  # ==========================================================================
-  # Nginx Reverse Proxy (Optional - uncomment to use)
-  # ==========================================================================
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: termo-nginx
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - web
-  #     - gateway
-  #   volumes:
-  #     - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./certs:/etc/nginx/certs:ro
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   networks:
-  #     - termo-network
+      - dokploy-network
 
 networks:
   termo-network:
     driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
-  postgres_data:
   redis_data:

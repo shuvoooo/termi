@@ -111,6 +111,8 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     const token = url.searchParams.get('token');
     const protocol = url.searchParams.get('protocol') as 'ssh' | 'scp' | 'rdp' | 'vnc';
     const serverId = url.searchParams.get('serverId');
+    const displayWidth  = parseInt(url.searchParams.get('width')  || '0', 10) || undefined;
+    const displayHeight = parseInt(url.searchParams.get('height') || '0', 10) || undefined;
 
     // Validate required parameters
     if (!token || !protocol || !serverId) {
@@ -173,20 +175,30 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
         return;
     }
 
-    // Set connection timeout
-    const timeoutId = setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Connection timeout - no activity',
-            }));
-            ws.close(4408, 'Connection Timeout');
-        }
-    }, CONNECTION_TIMEOUT);
+    // Idle timeout — reset on every client message so active sessions stay alive
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    // Clear timeout on first message
-    ws.once('message', () => {
-        clearTimeout(timeoutId);
+    const resetTimeout = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        // RDP/VNC sessions may be idle for longer than SSH; give them extra headroom
+        const idleLimit = (protocol === 'rdp' || protocol === 'vnc')
+            ? CONNECTION_TIMEOUT * 10  // 5 minutes
+            : CONNECTION_TIMEOUT;       // 30 seconds
+        timeoutId = setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Connection timeout - no activity',
+                }));
+                ws.close(4408, 'Connection Timeout');
+            }
+        }, idleLimit);
+    };
+
+    resetTimeout(); // Start the initial timer
+
+    ws.on('message', () => {
+        resetTimeout(); // Reset on every incoming client message
     });
 
     // Create appropriate handler
@@ -194,17 +206,22 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
         switch (protocol) {
             case 'ssh':
                 meta.handler = new SSHHandler(ws, tokenPayload);
+                ws.send(JSON.stringify({ type: 'connected', protocol }));
                 break;
             case 'scp':
                 meta.handler = new SCPHandler(ws, tokenPayload);
+                ws.send(JSON.stringify({ type: 'connected', protocol }));
                 break;
             case 'rdp':
-            case 'vnc':
-                meta.handler = new GuacamoleHandler(ws, tokenPayload, protocol);
+            case 'vnc': {
+                // GuacamoleHandler.connect() sends its own 'connected' message
+                // after the guacd handshake completes — do NOT send one here.
+                // Overlay the display size from query params onto the token payload.
+                const rdpPayload = { ...tokenPayload, displayWidth, displayHeight };
+                meta.handler = new GuacamoleHandler(ws, rdpPayload, protocol);
                 break;
+            }
         }
-
-        ws.send(JSON.stringify({ type: 'connected', protocol }));
 
     } catch (error) {
         console.error('Handler creation error:', error);
@@ -218,6 +235,7 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
 
     // Handle disconnection
     ws.on('close', () => {
+        if (timeoutId) clearTimeout(timeoutId);
         removeConnection(ws);
         console.log(`Connection closed: ${protocol}://${serverId}`);
     });

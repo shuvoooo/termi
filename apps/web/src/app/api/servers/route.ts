@@ -17,6 +17,7 @@ import {
     unauthorizedResponse,
 } from '@/lib/api';
 import { Protocol } from '@/app/generated/prisma/client';
+import { validateHost } from '@/lib/security/ssrf';
 
 const createServerSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100),
@@ -85,6 +86,15 @@ export async function POST(request: Request) {
     }
 
     try {
+        // SSRF protection: validate host doesn't point to internal network
+        const ssrfCheck = await validateHost(
+            validation.data.host,
+            process.env.ALLOW_PRIVATE_NETWORKS === 'true'
+        );
+        if (!ssrfCheck.valid) {
+            return errorResponse(ssrfCheck.error || 'Invalid host', 400);
+        }
+
         const server = await createServer({
             userId: user.id,
             ...validation.data,

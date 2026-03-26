@@ -12,6 +12,7 @@ import {
     getClientIP,
     getDeviceInfo,
 } from '@/lib/api';
+import { loginRateLimit } from '@/lib/rate-limit';
 
 const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -19,6 +20,14 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
+    const ipAddress = getClientIP(request);
+
+    // Rate limiting
+    const rl = loginRateLimit(ipAddress);
+    if (!rl.allowed) {
+        return errorResponse('Too many login attempts. Please try again later.', 429);
+    }
+
     const validation = await validateBody(request, loginSchema);
 
     if ('error' in validation) {
@@ -26,7 +35,6 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = validation.data;
-    const ipAddress = getClientIP(request);
     const deviceInfo = getDeviceInfo(request);
 
     try {
@@ -44,7 +52,11 @@ export async function POST(request: Request) {
         if (result.requires2FA) {
             return successResponse({
                 requires2FA: true,
-                message: 'Please enter your verification code',
+                twoFactorMethod: result.twoFactorMethod,
+                message:
+                    result.twoFactorMethod === 'EMAIL'
+                        ? 'A verification code has been sent to your email'
+                        : 'Please enter your authenticator app code',
             });
         }
 

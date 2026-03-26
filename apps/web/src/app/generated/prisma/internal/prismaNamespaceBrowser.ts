@@ -56,7 +56,9 @@ export const ModelName = {
   ServerGroup: 'ServerGroup',
   Server: 'Server',
   Connection: 'Connection',
-  AuditLog: 'AuditLog'
+  AuditLog: 'AuditLog',
+  RecoveryCode: 'RecoveryCode',
+  EmailOTP: 'EmailOTP'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -81,10 +83,16 @@ export const UserScalarFieldEnum = {
   passwordHash: 'passwordHash',
   totpSecret: 'totpSecret',
   totpEnabled: 'totpEnabled',
+  emailOtpEnabled: 'emailOtpEnabled',
+  twoFactorMethod: 'twoFactorMethod',
   masterKeyHash: 'masterKeyHash',
   masterKeySalt: 'masterKeySalt',
   isActive: 'isActive',
   isVerified: 'isVerified',
+  emailVerificationToken: 'emailVerificationToken',
+  emailVerificationExpiresAt: 'emailVerificationExpiresAt',
+  failedLoginCount: 'failedLoginCount',
+  lockoutUntil: 'lockoutUntil',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'
@@ -184,6 +192,30 @@ export const AuditLogScalarFieldEnum = {
 } as const
 
 export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
+
+
+export const RecoveryCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  codeHash: 'codeHash',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RecoveryCodeScalarFieldEnum = (typeof RecoveryCodeScalarFieldEnum)[keyof typeof RecoveryCodeScalarFieldEnum]
+
+
+export const EmailOTPScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  codeHash: 'codeHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  ipAddress: 'ipAddress',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailOTPScalarFieldEnum = (typeof EmailOTPScalarFieldEnum)[keyof typeof EmailOTPScalarFieldEnum]
 
 
 export const SortOrder = {

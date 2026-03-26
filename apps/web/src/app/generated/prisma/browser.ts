@@ -47,3 +47,13 @@ export type Connection = Prisma.ConnectionModel
  * 
  */
 export type AuditLog = Prisma.AuditLogModel
+/**
+ * Model RecoveryCode
+ * 
+ */
+export type RecoveryCode = Prisma.RecoveryCodeModel
+/**
+ * Model EmailOTP
+ * 
+ */
+export type EmailOTP = Prisma.EmailOTPModel
