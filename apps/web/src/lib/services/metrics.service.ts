@@ -45,24 +45,24 @@ export function checkReachability(
     return new Promise((resolve) => {
         const start = Date.now();
         const socket = new net.Socket();
+        let settled = false;
+
+        const done = (result: { reachable: boolean; latencyMs?: number }) => {
+            if (!settled) {
+                settled = true;
+                socket.destroy();
+                resolve(result);
+            }
+        };
 
         socket.setTimeout(timeoutMs);
 
         socket.connect(port, host, () => {
-            const latencyMs = Date.now() - start;
-            socket.destroy();
-            resolve({ reachable: true, latencyMs });
+            done({ reachable: true, latencyMs: Date.now() - start });
         });
 
-        socket.on('error', () => {
-            socket.destroy();
-            resolve({ reachable: false });
-        });
-
-        socket.on('timeout', () => {
-            socket.destroy();
-            resolve({ reachable: false });
-        });
+        socket.on('error', () => done({ reachable: false }));
+        socket.on('timeout', () => done({ reachable: false }));
     });
 }
 
@@ -107,8 +107,10 @@ export function getSSHMetrics(
             if (!settled) {
                 settled = true;
                 clearTimeout(timer);
-                client.end();
+                // Resolve BEFORE ending the client so the Promise always settles
+                // even if client.end() throws on an already-closed socket.
                 resolve(metrics);
+                try { client.end(); } catch { /* ignore – socket may already be gone */ }
             }
         };
 
@@ -202,6 +204,15 @@ export function getSSHMetrics(
             connectConfig.tryKeyboard = true;
         }
 
-        client.connect(connectConfig);
+        try {
+            client.connect(connectConfig);
+        } catch (err) {
+            // client.connect() can throw synchronously if the private key is
+            // malformed (e.g. wrong decryption key produced garbage).
+            done({
+                reachable: true,
+                error: `SSH connect error: ${err instanceof Error ? err.message : String(err)}`,
+            });
+        }
     });
 }

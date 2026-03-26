@@ -64,7 +64,11 @@ export async function POST(request: Request) {
             .setIssuedAt()
             .encrypt(key);
 
-        return successResponse({ token });
+        // Return gatewayUrl alongside the token so client components can read
+        // it at runtime rather than relying on the NEXT_PUBLIC_ build-time bake-in.
+        const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
+
+        return successResponse({ token, gatewayUrl });
     } catch (error) {
         if (error instanceof Error && error.message.includes('GATEWAY_JWT_SECRET')) {
             console.error('Connection token error:', error.message);

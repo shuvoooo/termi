@@ -47,6 +47,7 @@ ENV NODE_ENV=production
 ENV SESSION_SECRET=build-time-placeholder-not-used-in-runtime-x
 ENV ENCRYPTION_KEY=build-time-placeholder-not-used-in-runtime-x
 ENV GATEWAY_JWT_SECRET=build-time-placeholder-not-used-in-runtime
+ENV NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL:-build-time-placeholder-not-used-in-runtime-x}
 
 RUN npm run build --workspace=apps/web
 

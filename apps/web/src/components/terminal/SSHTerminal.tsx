@@ -10,6 +10,7 @@ import '@xterm/xterm/css/xterm.css';
 interface SSHTerminalProps {
     serverId: string;
     connectionToken: string;
+    gatewayUrl?: string;
     onDisconnect?: () => void;
     onError?: (error: string) => void;
     onKeyHandlerReady?: (handler: (key: string) => void) => void;
@@ -18,6 +19,7 @@ interface SSHTerminalProps {
 export default function SSHTerminal({
     serverId,
     connectionToken,
+    gatewayUrl,
     onDisconnect,
     onError,
     onKeyHandlerReady,
@@ -44,8 +46,8 @@ export default function SSHTerminal({
     }, []);
 
     const connect = useCallback(() => {
-        const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
-        const wsUrl = `${gatewayUrl}/connect?token=${connectionToken}&protocol=ssh&serverId=${serverId}`;
+        const gatewayBase = gatewayUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'ws://localhost:8080';
+        const wsUrl = `${gatewayBase}/connect?token=${connectionToken}&protocol=ssh&serverId=${serverId}`;
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;

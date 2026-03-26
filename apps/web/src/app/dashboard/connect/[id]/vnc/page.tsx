@@ -26,6 +26,7 @@ export default function VNCConnectionPage() {
 
     const [server, setServer] = useState<{ name: string } | null>(null);
     const [connectionToken, setConnectionToken] = useState<string | null>(null);
+    const [gatewayUrl, setGatewayUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -66,6 +67,7 @@ export default function VNCConnectionPage() {
                 }
 
                 setConnectionToken(tokenData.data.token);
+                setGatewayUrl(tokenData.data.gatewayUrl ?? null);
                 setLoading(false);
             } catch (err) {
                 console.error('Connection error:', err);
@@ -167,6 +169,7 @@ export default function VNCConnectionPage() {
                     serverId={serverId}
                     connectionToken={connectionToken}
                     protocol="vnc"
+                    gatewayUrl={gatewayUrl ?? undefined}
                     onDisconnect={() => {
                         console.log('VNC disconnected');
                     }}

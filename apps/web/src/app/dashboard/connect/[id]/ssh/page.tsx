@@ -39,6 +39,7 @@ export default function SSHConnectionPage() {
     const [server, setServer] = useState<{ name: string; hasPassword?: boolean } | null>(null);
     const [revealField, setRevealField] = useState<RevealField | null>(null);
     const [connectionToken, setConnectionToken] = useState<string | null>(null);
+    const [gatewayUrl, setGatewayUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -82,6 +83,7 @@ export default function SSHConnectionPage() {
                 }
 
                 setConnectionToken(tokenData.data.token);
+                setGatewayUrl(tokenData.data.gatewayUrl ?? null);
                 setLoading(false);
             } catch (err) {
                 console.error('Connection error:', err);
@@ -202,6 +204,7 @@ export default function SSHConnectionPage() {
                     <SSHTerminal
                         serverId={serverId}
                         connectionToken={connectionToken}
+                        gatewayUrl={gatewayUrl ?? undefined}
                         onDisconnect={handleDisconnect}
                         onError={handleError}
                         onKeyHandlerReady={(handler) => { terminalKeyHandler.current = handler; }}

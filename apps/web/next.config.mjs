@@ -15,6 +15,11 @@ const nextConfig = {
         NEXT_PUBLIC_APP_NAME: 'Termi',
         NEXT_PUBLIC_APP_VERSION: '1.0.0',
     },
+
+    // Prevent Next.js/Turbopack from bundling packages that use native Node.js
+    // addons (ssh2 → cpu-features, sshcrypto). They must be required at runtime
+    // via the normal Node.js module resolution, not inlined into the bundle.
+    serverExternalPackages: ['ssh2', 'cpu-features', 'sshcrypto'],
 };
 
 export default nextConfig;
