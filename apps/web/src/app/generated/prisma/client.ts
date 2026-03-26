@@ -77,6 +77,21 @@ export type AuditLog = Prisma.AuditLogModel
  */
 export type Passkey = Prisma.PasskeyModel
 /**
+ * Model PushSubscription
+ * 
+ */
+export type PushSubscription = Prisma.PushSubscriptionModel
+/**
+ * Model ServerMonitorConfig
+ * 
+ */
+export type ServerMonitorConfig = Prisma.ServerMonitorConfigModel
+/**
+ * Model ServerHealthRecord
+ * 
+ */
+export type ServerHealthRecord = Prisma.ServerHealthRecordModel
+/**
  * Model RecoveryCode
  * 
  */

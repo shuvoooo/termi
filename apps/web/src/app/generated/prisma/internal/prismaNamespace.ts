@@ -391,6 +391,9 @@ export const ModelName = {
   Connection: 'Connection',
   AuditLog: 'AuditLog',
   Passkey: 'Passkey',
+  PushSubscription: 'PushSubscription',
+  ServerMonitorConfig: 'ServerMonitorConfig',
+  ServerHealthRecord: 'ServerHealthRecord',
   RecoveryCode: 'RecoveryCode',
   EmailOTP: 'EmailOTP'
 } as const
@@ -408,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "serverGroup" | "server" | "connection" | "auditLog" | "passkey" | "recoveryCode" | "emailOTP"
+    modelProps: "user" | "session" | "serverGroup" | "server" | "connection" | "auditLog" | "passkey" | "pushSubscription" | "serverMonitorConfig" | "serverHealthRecord" | "recoveryCode" | "emailOTP"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -930,6 +933,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PushSubscription: {
+      payload: Prisma.$PushSubscriptionPayload<ExtArgs>
+      fields: Prisma.PushSubscriptionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PushSubscriptionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PushSubscriptionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        findFirst: {
+          args: Prisma.PushSubscriptionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PushSubscriptionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        findMany: {
+          args: Prisma.PushSubscriptionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>[]
+        }
+        create: {
+          args: Prisma.PushSubscriptionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        createMany: {
+          args: Prisma.PushSubscriptionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PushSubscriptionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>[]
+        }
+        delete: {
+          args: Prisma.PushSubscriptionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        update: {
+          args: Prisma.PushSubscriptionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PushSubscriptionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PushSubscriptionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PushSubscriptionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>[]
+        }
+        upsert: {
+          args: Prisma.PushSubscriptionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
+        }
+        aggregate: {
+          args: Prisma.PushSubscriptionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePushSubscription>
+        }
+        groupBy: {
+          args: Prisma.PushSubscriptionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PushSubscriptionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PushSubscriptionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PushSubscriptionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ServerMonitorConfig: {
+      payload: Prisma.$ServerMonitorConfigPayload<ExtArgs>
+      fields: Prisma.ServerMonitorConfigFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ServerMonitorConfigFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ServerMonitorConfigFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        findFirst: {
+          args: Prisma.ServerMonitorConfigFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ServerMonitorConfigFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        findMany: {
+          args: Prisma.ServerMonitorConfigFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>[]
+        }
+        create: {
+          args: Prisma.ServerMonitorConfigCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        createMany: {
+          args: Prisma.ServerMonitorConfigCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ServerMonitorConfigCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>[]
+        }
+        delete: {
+          args: Prisma.ServerMonitorConfigDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        update: {
+          args: Prisma.ServerMonitorConfigUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        deleteMany: {
+          args: Prisma.ServerMonitorConfigDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ServerMonitorConfigUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ServerMonitorConfigUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>[]
+        }
+        upsert: {
+          args: Prisma.ServerMonitorConfigUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerMonitorConfigPayload>
+        }
+        aggregate: {
+          args: Prisma.ServerMonitorConfigAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateServerMonitorConfig>
+        }
+        groupBy: {
+          args: Prisma.ServerMonitorConfigGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ServerMonitorConfigGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ServerMonitorConfigCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ServerMonitorConfigCountAggregateOutputType> | number
+        }
+      }
+    }
+    ServerHealthRecord: {
+      payload: Prisma.$ServerHealthRecordPayload<ExtArgs>
+      fields: Prisma.ServerHealthRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ServerHealthRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ServerHealthRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.ServerHealthRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ServerHealthRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        findMany: {
+          args: Prisma.ServerHealthRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>[]
+        }
+        create: {
+          args: Prisma.ServerHealthRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        createMany: {
+          args: Prisma.ServerHealthRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ServerHealthRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.ServerHealthRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        update: {
+          args: Prisma.ServerHealthRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.ServerHealthRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ServerHealthRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ServerHealthRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.ServerHealthRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ServerHealthRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.ServerHealthRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateServerHealthRecord>
+        }
+        groupBy: {
+          args: Prisma.ServerHealthRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ServerHealthRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ServerHealthRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ServerHealthRecordCountAggregateOutputType> | number
+        }
+      }
+    }
     RecoveryCode: {
       payload: Prisma.$RecoveryCodePayload<ExtArgs>
       fields: Prisma.RecoveryCodeFieldRefs
@@ -1250,6 +1475,54 @@ export const PasskeyScalarFieldEnum = {
 } as const
 
 export type PasskeyScalarFieldEnum = (typeof PasskeyScalarFieldEnum)[keyof typeof PasskeyScalarFieldEnum]
+
+
+export const PushSubscriptionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  endpoint: 'endpoint',
+  p256dhKey: 'p256dhKey',
+  authKey: 'authKey',
+  deviceLabel: 'deviceLabel',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PushSubscriptionScalarFieldEnum = (typeof PushSubscriptionScalarFieldEnum)[keyof typeof PushSubscriptionScalarFieldEnum]
+
+
+export const ServerMonitorConfigScalarFieldEnum = {
+  id: 'id',
+  serverId: 'serverId',
+  userId: 'userId',
+  enabled: 'enabled',
+  checkIntervalMinutes: 'checkIntervalMinutes',
+  alertEmail: 'alertEmail',
+  alertPush: 'alertPush',
+  failureThreshold: 'failureThreshold',
+  consecutiveFailures: 'consecutiveFailures',
+  alertSent: 'alertSent',
+  lastCheckedAt: 'lastCheckedAt',
+  lastStatus: 'lastStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ServerMonitorConfigScalarFieldEnum = (typeof ServerMonitorConfigScalarFieldEnum)[keyof typeof ServerMonitorConfigScalarFieldEnum]
+
+
+export const ServerHealthRecordScalarFieldEnum = {
+  id: 'id',
+  serverId: 'serverId',
+  reachable: 'reachable',
+  latencyMs: 'latencyMs',
+  cpuPercent: 'cpuPercent',
+  ramPercent: 'ramPercent',
+  diskPercent: 'diskPercent',
+  checkedAt: 'checkedAt'
+} as const
+
+export type ServerHealthRecordScalarFieldEnum = (typeof ServerHealthRecordScalarFieldEnum)[keyof typeof ServerHealthRecordScalarFieldEnum]
 
 
 export const RecoveryCodeScalarFieldEnum = {
@@ -1585,6 +1858,9 @@ export type GlobalOmitConfig = {
   connection?: Prisma.ConnectionOmit
   auditLog?: Prisma.AuditLogOmit
   passkey?: Prisma.PasskeyOmit
+  pushSubscription?: Prisma.PushSubscriptionOmit
+  serverMonitorConfig?: Prisma.ServerMonitorConfigOmit
+  serverHealthRecord?: Prisma.ServerHealthRecordOmit
   recoveryCode?: Prisma.RecoveryCodeOmit
   emailOTP?: Prisma.EmailOTPOmit
 }

@@ -51,13 +51,15 @@ model User {
   passkeyEnabled Boolean @default(false)
 
   // Relations
-  sessions      Session[]
-  servers       Server[]
-  serverGroups  ServerGroup[]
-  auditLogs     AuditLog[]
-  recoveryCodes RecoveryCode[]
-  emailOTPs     EmailOTP[]
-  passkeys      Passkey[]
+  sessions          Session[]
+  servers           Server[]
+  serverGroups      ServerGroup[]
+  auditLogs         AuditLog[]
+  recoveryCodes     RecoveryCode[]
+  emailOTPs         EmailOTP[]
+  passkeys          Passkey[]
+  pushSubscriptions PushSubscription[]
+  monitorConfigs    ServerMonitorConfig[]
 
   @@index([email])
 }
@@ -158,9 +160,11 @@ model Server {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group       ServerGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  connections Connection[]
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group         ServerGroup?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  connections   Connection[]
+  monitorConfig ServerMonitorConfig?
+  healthRecords ServerHealthRecord[]
 
   @@index([userId])
   @@index([groupId])
@@ -309,6 +313,94 @@ enum AuditAction {
   PASSKEY_REGISTERED
   PASSKEY_REMOVED
   PASSKEY_USED
+}
+
+// ============================================================================
+// PUSH NOTIFICATIONS
+// ============================================================================
+
+model PushSubscription {
+  id       String @id @default(cuid())
+  userId   String
+
+  // Web Push subscription data
+  endpoint  String @unique
+  p256dhKey String // auth.p256dh
+  authKey   String // auth.auth
+
+  // Device label (optional)
+  deviceLabel String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// SERVER MONITORING
+// ============================================================================
+
+model ServerMonitorConfig {
+  id       String @id @default(cuid())
+  serverId String @unique
+  userId   String
+
+  // Toggle monitoring on/off
+  enabled Boolean @default(false)
+
+  // Check interval in minutes (1, 5, 10, 15, 30, 60)
+  checkIntervalMinutes Int @default(5)
+
+  // Alert preferences
+  alertEmail Boolean @default(true)
+  alertPush  Boolean @default(true)
+
+  // How many consecutive failures before alerting (default 3)
+  failureThreshold Int @default(3)
+
+  // Current failure streak (reset on recovery)
+  consecutiveFailures Int @default(0)
+
+  // Whether an alert has already been sent for the current outage
+  alertSent Boolean @default(false)
+
+  // Last check timestamp
+  lastCheckedAt DateTime?
+
+  // Last known status
+  lastStatus Boolean @default(true) // true = up, false = down
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([enabled])
+}
+
+model ServerHealthRecord {
+  id       String @id @default(cuid())
+  serverId String
+
+  // Result
+  reachable  Boolean
+  latencyMs  Int?
+
+  // SSH metrics (null for non-SSH servers)
+  cpuPercent  Float?
+  ramPercent  Float?
+  diskPercent Float?
+
+  checkedAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, checkedAt])
 }
 
 // ============================================================================

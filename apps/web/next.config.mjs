@@ -19,7 +19,7 @@ const nextConfig = {
     // Prevent Next.js/Turbopack from bundling packages that use native Node.js
     // addons (ssh2 → cpu-features, sshcrypto). They must be required at runtime
     // via the normal Node.js module resolution, not inlined into the bundle.
-    serverExternalPackages: ['ssh2', 'cpu-features', 'sshcrypto'],
+    serverExternalPackages: ['ssh2', 'cpu-features', 'sshcrypto', 'web-push', 'node-cron'],
 };
 
 export default nextConfig;

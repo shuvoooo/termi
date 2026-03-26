@@ -23,6 +23,9 @@ import {
     AlertCircle,
     MonitorSmartphone,
     Clock,
+    BellRing,
+    Bell,
+    BellOff,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -229,7 +232,12 @@ export default function SettingsPage() {
     const [showAddPasskey, setShowAddPasskey] = useState(false);
     const [passkeyError, setPasskeyError] = useState('');
 
-    // ── Load user + passkeys ─────────────────────────────────────────────────
+    // ── Push notification state ──────────────────────────────────────────────
+    const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+    const [pushSubscribed, setPushSubscribed] = useState(false);
+    const [enablingPush, setEnablingPush] = useState(false);
+
+    // ── Load user + passkeys + push state ───────────────────────────────────
 
     useEffect(() => {
         async function init() {
@@ -244,6 +252,18 @@ export default function SettingsPage() {
         }
         void init();
         void loadPasskeys();
+
+        // Check current push permission + subscription state
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            setPushPermission(Notification.permission);
+        }
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(sub => {
+                    setPushSubscribed(!!sub);
+                });
+            }).catch(() => {});
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -256,6 +276,101 @@ export default function SettingsPage() {
         } catch { /* ignore */ }
         finally { setLoadingPasskeys(false); }
     }, []);
+
+    // ── Push Notifications ───────────────────────────────────────────────────
+
+    const handleEnablePush = async () => {
+        setEnablingPush(true);
+        try {
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                addToast('error', 'Push notifications are not supported by your browser');
+                return;
+            }
+
+            // Request permission
+            const permission = await Notification.requestPermission();
+            setPushPermission(permission);
+            if (permission !== 'granted') {
+                addToast('warning', 'Notification permission denied');
+                return;
+            }
+
+            // Get VAPID public key
+            const keyRes = await fetch('/api/push/vapid-public-key');
+            const keyData = await keyRes.json();
+            if (!keyData.success) {
+                addToast('error', 'Push notifications not configured on this server');
+                return;
+            }
+
+            // Convert VAPID key
+            const vapidKey = keyData.data.publicKey;
+            const applicationServerKey = urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer;
+
+            // Subscribe
+            const reg = await navigator.serviceWorker.ready;
+            const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey,
+            });
+
+            const subJson = subscription.toJSON() as {
+                endpoint: string;
+                keys: { p256dh: string; auth: string };
+            };
+
+            // Save to server
+            const res = await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: subJson.endpoint,
+                    keys: subJson.keys,
+                    deviceLabel: navigator.userAgent.slice(0, 100),
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPushSubscribed(true);
+                addToast('success', 'Push notifications enabled for this device');
+            } else {
+                addToast('error', data.error || 'Failed to save subscription');
+            }
+        } catch (err) {
+            addToast('error', `Failed to enable push: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+            setEnablingPush(false);
+        }
+    };
+
+    const handleDisablePush = async () => {
+        setEnablingPush(true);
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                await fetch('/api/push/subscribe', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: sub.endpoint }),
+                });
+                await sub.unsubscribe();
+            }
+            setPushSubscribed(false);
+            addToast('success', 'Push notifications disabled for this device');
+        } catch {
+            addToast('error', 'Failed to disable push notifications');
+        } finally {
+            setEnablingPush(false);
+        }
+    };
+
+    function urlBase64ToUint8Array(base64String: string): Uint8Array {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
 
     // ── TOTP ─────────────────────────────────────────────────────────────────
 
@@ -815,6 +930,72 @@ export default function SettingsPage() {
                             {changingPassword ? 'Changing…' : 'Change Password'}
                         </button>
                     </form>
+                </SectionCard>
+
+                {/* ── Push Notifications ── */}
+                <SectionCard
+                    icon={<BellRing className="w-5 h-5 text-amber-400" />}
+                    iconBg="bg-amber-500/15"
+                    title="Push Notifications"
+                    description="Receive browser push notifications for server alerts on this device"
+                >
+                    <div className="space-y-4">
+                        {/* Status indicator */}
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                            {pushSubscribed ? (
+                                <>
+                                    <Bell className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-emerald-400">Notifications active</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">This device will receive server alert notifications</p>
+                                    </div>
+                                </>
+                            ) : pushPermission === 'denied' ? (
+                                <>
+                                    <BellOff className="w-5 h-5 text-red-400 shrink-0" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-red-400">Notifications blocked</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Your browser has blocked notifications. Enable them in your browser settings then reload.
+                                        </p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <BellOff className="w-5 h-5 text-slate-500 shrink-0" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium">Notifications off</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Enable to get server down/up alerts on this device</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {pushSubscribed ? (
+                            <button
+                                onClick={handleDisablePush}
+                                disabled={enablingPush}
+                                className="btn btn-secondary"
+                            >
+                                {enablingPush ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellOff className="w-4 h-4" />}
+                                Disable for this device
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleEnablePush}
+                                disabled={enablingPush || pushPermission === 'denied'}
+                                className="btn btn-primary"
+                            >
+                                {enablingPush ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                                {enablingPush ? 'Enabling…' : 'Enable for this device'}
+                            </button>
+                        )}
+
+                        <p className="text-xs text-slate-600">
+                            Notifications are per-device. Enable on each device where you want alerts.
+                            Configure alert rules per server in the server details page.
+                        </p>
+                    </div>
                 </SectionCard>
             </div>
         </div>

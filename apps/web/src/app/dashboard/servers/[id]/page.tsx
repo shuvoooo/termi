@@ -1,0 +1,658 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import {
+    ArrowLeft, Terminal, FolderOpen, Monitor, Pencil,
+    Loader2, Activity, Wifi, WifiOff, Bell, BellOff,
+    CheckCircle2, AlertTriangle, Clock, Cpu, MemoryStick,
+    HardDrive, ToggleLeft, ToggleRight, Mail, BellRing,
+    RefreshCw, Tv,
+} from 'lucide-react';
+import MetricSparkline from '@/components/monitoring/MetricSparkline';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ServerInfo {
+    id: string;
+    name: string;
+    description?: string | null;
+    host: string;
+    port: number;
+    protocol: 'SSH' | 'SCP' | 'RDP' | 'VNC';
+    tags: string[];
+    isFavorite: boolean;
+    lastUsedAt: string | null;
+    group: { id: string; name: string; color: string | null } | null;
+}
+
+interface MonitorConfig {
+    enabled: boolean;
+    checkIntervalMinutes: number;
+    alertEmail: boolean;
+    alertPush: boolean;
+    failureThreshold: number;
+    consecutiveFailures: number;
+    alertSent: boolean;
+    lastCheckedAt: string | null;
+    lastStatus: boolean;
+}
+
+interface HealthRecord {
+    reachable: boolean;
+    latencyMs: number | null;
+    cpuPercent: number | null;
+    ramPercent: number | null;
+    diskPercent: number | null;
+    checkedAt: string;
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+const protocolColors = {
+    SSH: 'bg-green-500/15 text-green-400 border-green-500/30',
+    SCP: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    RDP: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    VNC: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+};
+
+const protocolIcons = {
+    SSH: Terminal,
+    SCP: FolderOpen,
+    RDP: Monitor,
+    VNC: Tv,
+};
+
+function formatRelativeTime(dateStr: string | null): string {
+    if (!dateStr) return 'Never';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function MetricCard({
+    label,
+    value,
+    icon: Icon,
+    color,
+    data,
+    unit = '%',
+    alertAt,
+}: {
+    label: string;
+    value: number | null | undefined;
+    icon: React.ElementType;
+    color: string;
+    data: (number | null | undefined)[];
+    unit?: string;
+    alertAt?: number;
+}) {
+    const displayValue = value != null ? `${Math.round(value)}${unit}` : '—';
+    const isAlert = alertAt != null && value != null && value >= alertAt;
+
+    return (
+        <div className="card p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${color}`} />
+                    <span className="text-xs font-medium text-slate-400">{label}</span>
+                </div>
+                <span className={`text-lg font-bold tabular-nums ${isAlert ? 'text-red-400' : 'text-white'}`}>
+                    {displayValue}
+                </span>
+            </div>
+            <MetricSparkline
+                data={data}
+                color={isAlert ? '#ef4444' : color.replace('text-', '#').replace('-400', '')}
+                height={44}
+                alertThreshold={alertAt}
+            />
+        </div>
+    );
+}
+
+function StatPill({
+    label,
+    value,
+    sub,
+}: { label: string; value: string; sub?: string }) {
+    return (
+        <div className="flex flex-col gap-0.5 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wide">{label}</span>
+            <span className="text-sm font-semibold text-white">{value}</span>
+            {sub && <span className="text-[10px] text-slate-500">{sub}</span>}
+        </div>
+    );
+}
+
+// ============================================================================
+// MAIN PAGE
+// ============================================================================
+
+const INTERVALS = [
+    { value: 1, label: 'Every 1 min' },
+    { value: 5, label: 'Every 5 min' },
+    { value: 10, label: 'Every 10 min' },
+    { value: 15, label: 'Every 15 min' },
+    { value: 30, label: 'Every 30 min' },
+    { value: 60, label: 'Every hour' },
+] as const;
+
+export default function ServerDetailsPage() {
+    const router = useRouter();
+    const { id } = useParams<{ id: string }>();
+
+    const [server, setServer] = useState<ServerInfo | null>(null);
+    const [monitorConfig, setMonitorConfig] = useState<MonitorConfig | null>(null);
+    const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Local form state for monitor config
+    const [form, setForm] = useState({
+        enabled: false,
+        checkIntervalMinutes: 5 as 1 | 5 | 10 | 15 | 30 | 60,
+        alertEmail: true,
+        alertPush: true,
+        failureThreshold: 3,
+    });
+
+    // ── Load Data ──────────────────────────────────────────────────────────
+
+    const loadAll = useCallback(async () => {
+        try {
+            const [serverRes, monitorRes, historyRes] = await Promise.all([
+                fetch(`/api/servers/${id}`),
+                fetch(`/api/servers/${id}/monitor`),
+                fetch(`/api/servers/${id}/health-history?limit=50`),
+            ]);
+
+            const [serverData, monitorData, historyData] = await Promise.all([
+                serverRes.json(),
+                monitorRes.json(),
+                historyRes.json(),
+            ]);
+
+            if (!serverData.success) { router.push('/dashboard'); return; }
+            setServer(serverData.data.server);
+
+            if (monitorData.success && monitorData.data.config) {
+                const cfg = monitorData.data.config as MonitorConfig;
+                setMonitorConfig(cfg);
+                setForm({
+                    enabled: cfg.enabled,
+                    checkIntervalMinutes: cfg.checkIntervalMinutes as typeof form.checkIntervalMinutes,
+                    alertEmail: cfg.alertEmail,
+                    alertPush: cfg.alertPush,
+                    failureThreshold: cfg.failureThreshold,
+                });
+            }
+
+            if (historyData.success) {
+                setHealthRecords(historyData.data.records);
+            }
+        } catch {
+            router.push('/dashboard');
+        } finally {
+            setLoading(false);
+        }
+    }, [id, router]);
+
+    useEffect(() => { loadAll(); }, [loadAll]);
+
+    const refreshHistory = async () => {
+        setRefreshing(true);
+        try {
+            const res = await fetch(`/api/servers/${id}/health-history?limit=50`);
+            const data = await res.json();
+            if (data.success) setHealthRecords(data.data.records);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    // ── Save Monitor Config ────────────────────────────────────────────────
+
+    const handleSaveMonitor = async () => {
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/servers/${id}/monitor`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setMonitorConfig(data.data.config);
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ── Derived Data ───────────────────────────────────────────────────────
+
+    const latencies = healthRecords.map(r => r.reachable ? (r.latencyMs ?? null) : null);
+    const cpus = healthRecords.map(r => r.cpuPercent);
+    const rams = healthRecords.map(r => r.ramPercent);
+    const disks = healthRecords.map(r => r.diskPercent);
+
+    const lastRecord = healthRecords[healthRecords.length - 1];
+    const upCount = healthRecords.filter(r => r.reachable).length;
+    const uptimePct = healthRecords.length > 0
+        ? Math.round((upCount / healthRecords.length) * 100)
+        : null;
+
+    const isSSH = server?.protocol === 'SSH';
+
+    // ── Render ─────────────────────────────────────────────────────────────
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-48">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
+            </div>
+        );
+    }
+
+    if (!server) return null;
+
+    const ProtoIcon = protocolIcons[server.protocol];
+    const protoColor = protocolColors[server.protocol];
+    const isOnline = lastRecord?.reachable ?? null;
+
+    return (
+        <div className="max-w-5xl mx-auto space-y-5">
+
+            {/* ── Header ── */}
+            <div className="flex items-center gap-3">
+                <Link href="/dashboard" className="btn btn-ghost btn-icon btn-sm">
+                    <ArrowLeft className="w-4 h-4" />
+                </Link>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5">
+                        <h1 className="text-xl font-semibold truncate">{server.name}</h1>
+                        {isOnline !== null && (
+                            isOnline
+                                ? <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Online
+                                  </span>
+                                : <span className="flex items-center gap-1 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-full px-2 py-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                    Offline
+                                  </span>
+                        )}
+                    </div>
+                    {server.description && (
+                        <p className="text-sm text-slate-400 mt-0.5 truncate">{server.description}</p>
+                    )}
+                </div>
+                <Link href={`/dashboard/servers/${id}/edit`} className="btn btn-secondary btn-sm gap-1.5">
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                </Link>
+            </div>
+
+            {/* ── Server Info + Quick Stats ── */}
+            <div className="card p-4">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold ${protoColor}`}>
+                        <ProtoIcon className="w-3.5 h-3.5" />
+                        {server.protocol}
+                    </div>
+                    <span className="font-mono text-sm text-slate-300">{server.host}:{server.port}</span>
+                    {server.group && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                            {server.group.name}
+                        </span>
+                    )}
+                    {server.tags.map(t => (
+                        <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{t}</span>
+                    ))}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <StatPill label="Last Used" value={formatRelativeTime(server.lastUsedAt)} />
+                    {monitorConfig?.lastCheckedAt && (
+                        <StatPill label="Last Check" value={formatRelativeTime(monitorConfig.lastCheckedAt)} />
+                    )}
+                    {uptimePct !== null && (
+                        <StatPill
+                            label="Uptime"
+                            value={`${uptimePct}%`}
+                            sub={`last ${healthRecords.length} checks`}
+                        />
+                    )}
+                    {lastRecord?.latencyMs != null && (
+                        <StatPill label="Latency" value={`${lastRecord.latencyMs}ms`} />
+                    )}
+                    {monitorConfig && (
+                        <StatPill
+                            label="Monitoring"
+                            value={monitorConfig.enabled ? 'Active' : 'Inactive'}
+                            sub={monitorConfig.enabled ? `every ${monitorConfig.checkIntervalMinutes}m` : undefined}
+                        />
+                    )}
+                </div>
+
+                {/* Connect buttons */}
+                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700/50">
+                    <Link
+                        href={`/dashboard/connect/${id}/${server.protocol.toLowerCase()}`}
+                        className="btn btn-primary btn-sm gap-1.5"
+                    >
+                        <ProtoIcon className="w-3.5 h-3.5" />
+                        Connect via {server.protocol}
+                    </Link>
+                </div>
+            </div>
+
+            {/* ── Monitoring Graphs ── */}
+            <div>
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-sky-400" />
+                        Health History
+                        <span className="text-[10px] text-slate-500 font-normal">({healthRecords.length} records)</span>
+                    </h2>
+                    <button
+                        onClick={refreshHistory}
+                        disabled={refreshing}
+                        className="btn btn-ghost btn-icon btn-sm"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+
+                {healthRecords.length === 0 ? (
+                    <div className="card p-8 text-center">
+                        <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                        <p className="text-sm text-slate-500">No health data yet</p>
+                        <p className="text-xs text-slate-600 mt-1">Enable monitoring below to start collecting data</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Latency */}
+                        <div className="card p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <Wifi className="w-4 h-4 text-sky-400" />
+                                    <span className="text-xs font-medium text-slate-400">Latency</span>
+                                </div>
+                                <span className="text-lg font-bold tabular-nums text-white">
+                                    {lastRecord?.latencyMs != null ? `${lastRecord.latencyMs}ms` : '—'}
+                                </span>
+                            </div>
+                            <MetricSparkline data={latencies} color="#38bdf8" height={44} />
+                            {/* Uptime bar */}
+                            <div className="mt-3 pt-3 border-t border-slate-700/50">
+                                <div className="flex gap-0.5 h-3 rounded overflow-hidden">
+                                    {healthRecords.slice(-40).map((r, i) => (
+                                        <div
+                                            key={i}
+                                            className={`flex-1 rounded-sm ${r.reachable ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                            title={`${new Date(r.checkedAt).toLocaleTimeString()} — ${r.reachable ? 'Up' : 'Down'}`}
+                                        />
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-1">
+                                    Uptime: {upCount}/{healthRecords.length} checks
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* CPU — only for SSH */}
+                        {isSSH && (
+                            <div className="card p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Cpu className="w-4 h-4 text-violet-400" />
+                                        <span className="text-xs font-medium text-slate-400">CPU</span>
+                                    </div>
+                                    <span className={`text-lg font-bold tabular-nums ${(lastRecord?.cpuPercent ?? 0) >= 90 ? 'text-red-400' : 'text-white'}`}>
+                                        {lastRecord?.cpuPercent != null ? `${Math.round(lastRecord.cpuPercent)}%` : '—'}
+                                    </span>
+                                </div>
+                                <MetricSparkline data={cpus} color="#a78bfa" height={44} alertThreshold={90} />
+                            </div>
+                        )}
+
+                        {/* RAM — only for SSH */}
+                        {isSSH && (
+                            <div className="card p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <MemoryStick className="w-4 h-4 text-amber-400" />
+                                        <span className="text-xs font-medium text-slate-400">RAM</span>
+                                    </div>
+                                    <span className={`text-lg font-bold tabular-nums ${(lastRecord?.ramPercent ?? 0) >= 90 ? 'text-red-400' : 'text-white'}`}>
+                                        {lastRecord?.ramPercent != null ? `${Math.round(lastRecord.ramPercent)}%` : '—'}
+                                    </span>
+                                </div>
+                                <MetricSparkline data={rams} color="#fbbf24" height={44} alertThreshold={90} />
+                            </div>
+                        )}
+
+                        {/* Disk — only for SSH */}
+                        {isSSH && (
+                            <div className="card p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <HardDrive className="w-4 h-4 text-rose-400" />
+                                        <span className="text-xs font-medium text-slate-400">Disk</span>
+                                    </div>
+                                    <span className={`text-lg font-bold tabular-nums ${(lastRecord?.diskPercent ?? 0) >= 90 ? 'text-red-400' : 'text-white'}`}>
+                                        {lastRecord?.diskPercent != null ? `${Math.round(lastRecord.diskPercent)}%` : '—'}
+                                    </span>
+                                </div>
+                                <MetricSparkline data={disks} color="#fb7185" height={44} alertThreshold={90} />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Monitor Configuration ── */}
+            <div>
+                <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2 mb-3">
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    Monitoring & Alerts
+                </h2>
+
+                <div className="card divide-y divide-slate-700/50">
+
+                    {/* Enable toggle */}
+                    <div className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium">Enable Monitoring</p>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Periodically check if this server is reachable
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))}
+                            className="shrink-0"
+                        >
+                            {form.enabled
+                                ? <ToggleRight className="w-9 h-9 text-sky-400" />
+                                : <ToggleLeft className="w-9 h-9 text-slate-600" />
+                            }
+                        </button>
+                    </div>
+
+                    {/* Check interval */}
+                    <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <div>
+                                <p className="text-sm font-medium flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                    Check Interval
+                                </p>
+                                <p className="text-xs text-slate-500 mt-0.5">How often to ping the server</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            {INTERVALS.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setForm(f => ({ ...f, checkIntervalMinutes: opt.value }))}
+                                    disabled={!form.enabled}
+                                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                                        form.checkIntervalMinutes === opt.value && form.enabled
+                                            ? 'bg-sky-500/15 border-sky-500/40 text-sky-400'
+                                            : !form.enabled
+                                            ? 'border-slate-700 text-slate-700 cursor-not-allowed'
+                                            : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Failure threshold */}
+                    <div className="p-4">
+                        <div className="mb-2">
+                            <p className="text-sm font-medium flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                                Failure Threshold
+                            </p>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Alert after this many consecutive failed checks
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                            <input
+                                type="range"
+                                min={1}
+                                max={10}
+                                value={form.failureThreshold}
+                                disabled={!form.enabled}
+                                onChange={e => setForm(f => ({ ...f, failureThreshold: parseInt(e.target.value) }))}
+                                className="flex-1 accent-sky-500 disabled:opacity-40"
+                            />
+                            <span className="text-sm font-bold text-white w-8 text-center tabular-nums">
+                                {form.failureThreshold}×
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1">
+                            Alert fires after {form.failureThreshold} consecutive failure{form.failureThreshold !== 1 ? 's' : ''}
+                            {form.enabled && form.checkIntervalMinutes
+                                ? ` (~${form.failureThreshold * form.checkIntervalMinutes} min downtime)`
+                                : ''}
+                        </p>
+                    </div>
+
+                    {/* Alert channels */}
+                    <div className="p-4 space-y-3">
+                        <p className="text-sm font-medium text-slate-300">Alert Channels</p>
+
+                        <label className={`flex items-center justify-between cursor-pointer rounded-lg px-3 py-2.5 border transition-colors ${
+                            form.alertEmail && form.enabled
+                                ? 'bg-sky-500/8 border-sky-500/30'
+                                : 'border-slate-700/60 bg-transparent'
+                        } ${!form.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <div className="flex items-center gap-2.5">
+                                <Mail className="w-4 h-4 text-slate-400" />
+                                <div>
+                                    <p className="text-sm font-medium">Email</p>
+                                    <p className="text-xs text-slate-500">Send alert to your account email</p>
+                                </div>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={form.alertEmail}
+                                disabled={!form.enabled}
+                                onChange={e => setForm(f => ({ ...f, alertEmail: e.target.checked }))}
+                                className="w-4 h-4 accent-sky-500"
+                            />
+                        </label>
+
+                        <label className={`flex items-center justify-between cursor-pointer rounded-lg px-3 py-2.5 border transition-colors ${
+                            form.alertPush && form.enabled
+                                ? 'bg-sky-500/8 border-sky-500/30'
+                                : 'border-slate-700/60 bg-transparent'
+                        } ${!form.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <div className="flex items-center gap-2.5">
+                                <BellRing className="w-4 h-4 text-slate-400" />
+                                <div>
+                                    <p className="text-sm font-medium">Push Notification</p>
+                                    <p className="text-xs text-slate-500">Browser / mobile push alert</p>
+                                </div>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={form.alertPush}
+                                disabled={!form.enabled}
+                                onChange={e => setForm(f => ({ ...f, alertPush: e.target.checked }))}
+                                className="w-4 h-4 accent-sky-500"
+                            />
+                        </label>
+                    </div>
+
+                    {/* Current state indicator */}
+                    {monitorConfig?.enabled && (
+                        <div className="px-4 py-3 bg-slate-800/40">
+                            <div className="flex items-center gap-3 text-xs">
+                                {monitorConfig.alertSent ? (
+                                    <>
+                                        <WifiOff className="w-4 h-4 text-red-400 shrink-0" />
+                                        <div>
+                                            <span className="text-red-400 font-medium">Server is currently DOWN</span>
+                                            <span className="text-slate-500 ml-1.5">— alert was sent</span>
+                                        </div>
+                                    </>
+                                ) : monitorConfig.consecutiveFailures > 0 ? (
+                                    <>
+                                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                                        <span className="text-amber-400">
+                                            {monitorConfig.consecutiveFailures} failure{monitorConfig.consecutiveFailures !== 1 ? 's' : ''} —
+                                            {monitorConfig.failureThreshold - monitorConfig.consecutiveFailures} more before alert
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                        <span className="text-emerald-400">Server is healthy</span>
+                                    </>
+                                )}
+                                {monitorConfig.lastCheckedAt && (
+                                    <span className="ml-auto text-slate-600">
+                                        Last checked {formatRelativeTime(monitorConfig.lastCheckedAt)}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Save button */}
+                    <div className="p-4">
+                        <button
+                            onClick={handleSaveMonitor}
+                            disabled={saving}
+                            className="btn btn-primary w-full"
+                        >
+                            {saving
+                                ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                                : <><Bell className="w-4 h-4" /> Save Monitoring Settings</>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

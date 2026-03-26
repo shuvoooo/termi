@@ -46,6 +46,19 @@ export default async function RootLayout({
             </head>
             <body className="min-h-screen bg-dark-950 text-white antialiased">
                 {children}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
+                        `.trim(),
+                    }}
+                />
             </body>
         </html>
     );

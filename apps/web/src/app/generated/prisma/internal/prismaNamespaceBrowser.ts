@@ -58,6 +58,9 @@ export const ModelName = {
   Connection: 'Connection',
   AuditLog: 'AuditLog',
   Passkey: 'Passkey',
+  PushSubscription: 'PushSubscription',
+  ServerMonitorConfig: 'ServerMonitorConfig',
+  ServerHealthRecord: 'ServerHealthRecord',
   RecoveryCode: 'RecoveryCode',
   EmailOTP: 'EmailOTP'
 } as const
@@ -211,6 +214,54 @@ export const PasskeyScalarFieldEnum = {
 } as const
 
 export type PasskeyScalarFieldEnum = (typeof PasskeyScalarFieldEnum)[keyof typeof PasskeyScalarFieldEnum]
+
+
+export const PushSubscriptionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  endpoint: 'endpoint',
+  p256dhKey: 'p256dhKey',
+  authKey: 'authKey',
+  deviceLabel: 'deviceLabel',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PushSubscriptionScalarFieldEnum = (typeof PushSubscriptionScalarFieldEnum)[keyof typeof PushSubscriptionScalarFieldEnum]
+
+
+export const ServerMonitorConfigScalarFieldEnum = {
+  id: 'id',
+  serverId: 'serverId',
+  userId: 'userId',
+  enabled: 'enabled',
+  checkIntervalMinutes: 'checkIntervalMinutes',
+  alertEmail: 'alertEmail',
+  alertPush: 'alertPush',
+  failureThreshold: 'failureThreshold',
+  consecutiveFailures: 'consecutiveFailures',
+  alertSent: 'alertSent',
+  lastCheckedAt: 'lastCheckedAt',
+  lastStatus: 'lastStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ServerMonitorConfigScalarFieldEnum = (typeof ServerMonitorConfigScalarFieldEnum)[keyof typeof ServerMonitorConfigScalarFieldEnum]
+
+
+export const ServerHealthRecordScalarFieldEnum = {
+  id: 'id',
+  serverId: 'serverId',
+  reachable: 'reachable',
+  latencyMs: 'latencyMs',
+  cpuPercent: 'cpuPercent',
+  ramPercent: 'ramPercent',
+  diskPercent: 'diskPercent',
+  checkedAt: 'checkedAt'
+} as const
+
+export type ServerHealthRecordScalarFieldEnum = (typeof ServerHealthRecordScalarFieldEnum)[keyof typeof ServerHealthRecordScalarFieldEnum]
 
 
 export const RecoveryCodeScalarFieldEnum = {

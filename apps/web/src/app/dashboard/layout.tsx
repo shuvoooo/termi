@@ -102,7 +102,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                     {/* Logo */}
                     <div className="flex items-center justify-between h-16 px-4 border-b border-dark-800">
                         <Link href="/dashboard" className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                            <div className="w-9 h-9 rounded-lg bg-linear-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                                 <Terminal className="w-5 h-5 text-white" />
                             </div>
                             <span className="text-lg font-bold gradient-text">Termi</span>
@@ -162,7 +162,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                     {/* User */}
                     <div className="p-4 border-t border-dark-800">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                            <div className="w-10 h-10 rounded-full bg-linear-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white font-medium">
                                 {user.email[0].toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">

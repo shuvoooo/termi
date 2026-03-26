@@ -7,7 +7,7 @@ import {
     Server, Terminal, FolderOpen, Monitor, Plus,
     Star, MoreVertical, Search, RefreshCw,
     Layers, Pencil, Trash2, AlertTriangle,
-    LayoutGrid, List, KeyRound, Clock, Wifi, WifiOff,
+    LayoutGrid, List, KeyRound, Clock, Wifi, WifiOff, Activity,
 } from 'lucide-react';
 import { useSessionsContext } from './sessions-context';
 import dynamic from 'next/dynamic';
@@ -184,6 +184,12 @@ function GridCard({
                             </button>
                             {menuOpen && (
                                 <div className="absolute right-0 top-6 z-30 w-40 rounded-lg border border-dark-700 bg-dark-800 shadow-2xl py-1">
+                                    <Link
+                                        href={`/dashboard/servers/${server.id}`}
+                                        className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                                    >
+                                        <Activity className="w-3.5 h-3.5 text-dark-400" /> Details
+                                    </Link>
                                     <button
                                         onClick={onEdit}
                                         className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
@@ -415,6 +421,12 @@ function ListRow({
                     </button>
                     {menuOpen && (
                         <div className="absolute right-0 top-6 z-30 w-40 rounded-lg border border-dark-700 bg-dark-800 shadow-2xl py-1">
+                            <Link
+                                href={`/dashboard/servers/${server.id}`}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"
+                            >
+                                <Activity className="w-3.5 h-3.5 text-dark-400" /> Details
+                            </Link>
                             <button
                                 onClick={onEdit}
                                 className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-dark-700 transition-colors"

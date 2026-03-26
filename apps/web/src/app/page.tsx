@@ -11,13 +11,13 @@ import {
 
 export default function HomePage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950">
+        <div className="min-h-screen bg-linear-to-br from-dark-950 via-dark-900 to-dark-950">
             {/* Header */}
             <header className="fixed top-0 left-0 right-0 z-50 glass">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                                 <Terminal className="w-6 h-6 text-white" />
                             </div>
                             <span className="text-xl font-bold gradient-text">Termi</span>
