@@ -88,3 +88,8 @@ export function credentialRevealRateLimit(userId: string): RateLimitResult {
     return rateLimit(`reveal:${userId}`, 3, 5 * 60 * 1000);
 }
 
+/** 10 passkey authentication attempts per 5 minutes per IP */
+export function passkeyAuthRateLimit(ip: string): RateLimitResult {
+    return rateLimit(`passkey-auth:${ip}`, 10, 5 * 60 * 1000);
+}
+

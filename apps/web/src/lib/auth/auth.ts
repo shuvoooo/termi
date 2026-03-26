@@ -42,6 +42,7 @@ export interface AuthResult {
     userId?: string;
     email?: string;
     sessionToken?: string;
+    suggestPasskeySetup?: boolean; // True when user has no passkeys yet
 }
 
 // ============================================================================
@@ -220,7 +221,10 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
     session.isLoggedIn = true;
     await session.save();
 
-    return { success: true, userId: user.id, email: user.email, sessionToken };
+    // Suggest passkey setup if the user has none registered yet
+    const passkeyCount = await prisma.passkey.count({ where: { userId: user.id } });
+
+    return { success: true, userId: user.id, email: user.email, sessionToken, suggestPasskeySetup: passkeyCount === 0 };
 }
 
 // ============================================================================
@@ -320,7 +324,9 @@ export async function verify2FA(
     session.tempUserId = undefined;
     await session.save();
 
-    return { success: true, userId: user.id, email: user.email, sessionToken };
+    const passkeyCount = await prisma.passkey.count({ where: { userId: user.id } });
+
+    return { success: true, userId: user.id, email: user.email, sessionToken, suggestPasskeySetup: passkeyCount === 0 };
 }
 
 // ============================================================================
@@ -456,6 +462,7 @@ export async function getCurrentUser() {
             emailOtpEnabled: true,
             twoFactorMethod: true,
             masterKeyHash: true,
+            passkeyEnabled: true,
             isActive: true,
             isVerified: true,
             createdAt: true,

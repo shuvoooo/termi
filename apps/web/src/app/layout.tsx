@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,13 +30,20 @@ export const viewport: Viewport = {
     viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const nonce = (await headers()).get('x-nonce') ?? '';
+
     return (
         <html lang="en" className="dark">
+            <head>
+                {/* Propagate the per-request nonce so Next.js can apply it to
+                    any inline scripts it injects during hydration */}
+                <meta name="csp-nonce" content={nonce} />
+            </head>
             <body className="min-h-screen bg-dark-950 text-white antialiased">
                 {children}
             </body>

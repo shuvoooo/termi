@@ -22,6 +22,7 @@ export async function GET() {
                 emailOtpEnabled: user.emailOtpEnabled,
                 twoFactorMethod: user.twoFactorMethod,
                 hasMasterKey: !!user.masterKeyHash,
+                passkeyEnabled: user.passkeyEnabled,
                 isVerified: user.isVerified,
                 createdAt: user.createdAt,
             },

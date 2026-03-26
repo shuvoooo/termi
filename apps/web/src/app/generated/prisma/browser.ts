@@ -48,6 +48,11 @@ export type Connection = Prisma.ConnectionModel
  */
 export type AuditLog = Prisma.AuditLogModel
 /**
+ * Model Passkey
+ * 
+ */
+export type Passkey = Prisma.PasskeyModel
+/**
  * Model RecoveryCode
  * 
  */

@@ -23,6 +23,8 @@ export interface SessionData {
     tempUserId?: string; // For 2FA flow
     masterKey?: string;  // Encrypted master key for session
     lastActivity?: number;
+    passkeyChallenge?: string; // Base64URL challenge for WebAuthn registration/auth
+    passkeyAuthUserId?: string; // userId resolved during passkey auth options (before assertion verified)
 }
 
 // ============================================================================
@@ -292,6 +294,8 @@ export async function destroySession(): Promise<void> {
     session.requires2FA = undefined;
     session.tempUserId = undefined;
     session.masterKey = undefined;
+    session.passkeyChallenge = undefined;
+    session.passkeyAuthUserId = undefined;
 
     await session.save();
 }

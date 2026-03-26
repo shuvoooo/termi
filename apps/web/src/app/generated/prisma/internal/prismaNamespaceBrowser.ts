@@ -57,6 +57,7 @@ export const ModelName = {
   Server: 'Server',
   Connection: 'Connection',
   AuditLog: 'AuditLog',
+  Passkey: 'Passkey',
   RecoveryCode: 'RecoveryCode',
   EmailOTP: 'EmailOTP'
 } as const
@@ -95,7 +96,8 @@ export const UserScalarFieldEnum = {
   lockoutUntil: 'lockoutUntil',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  lastLoginAt: 'lastLoginAt'
+  lastLoginAt: 'lastLoginAt',
+  passkeyEnabled: 'passkeyEnabled'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -192,6 +194,23 @@ export const AuditLogScalarFieldEnum = {
 } as const
 
 export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
+
+
+export const PasskeyScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  credentialID: 'credentialID',
+  credentialPublicKey: 'credentialPublicKey',
+  counter: 'counter',
+  deviceType: 'deviceType',
+  backedUp: 'backedUp',
+  transports: 'transports',
+  createdAt: 'createdAt',
+  lastUsedAt: 'lastUsedAt'
+} as const
+
+export type PasskeyScalarFieldEnum = (typeof PasskeyScalarFieldEnum)[keyof typeof PasskeyScalarFieldEnum]
 
 
 export const RecoveryCodeScalarFieldEnum = {

@@ -47,6 +47,9 @@ model User {
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
+  // Passkeys
+  passkeyEnabled Boolean @default(false)
+
   // Relations
   sessions      Session[]
   servers       Server[]
@@ -54,6 +57,7 @@ model User {
   auditLogs     AuditLog[]
   recoveryCodes RecoveryCode[]
   emailOTPs     EmailOTP[]
+  passkeys      Passkey[]
 
   @@index([email])
 }
@@ -244,6 +248,28 @@ enum TwoFactorMethod {
   EMAIL
 }
 
+// ============================================================================
+// PASSKEYS (WebAuthn / FIDO2)
+// ============================================================================
+
+model Passkey {
+  id                  String    @id @default(cuid())
+  userId              String
+  name                String    @default("Passkey") // User-visible device name
+  credentialID        String    @unique             // Base64URL-encoded credential ID
+  credentialPublicKey Bytes                         // COSE-encoded public key
+  counter             BigInt    @default(0)         // Signature counter (replay protection)
+  deviceType          String                        // 'singleDevice' | 'multiDevice'
+  backedUp            Boolean   @default(false)     // Synced passkey?
+  transports          String[]                      // e.g. ["internal", "hybrid"]
+  createdAt           DateTime  @default(now())
+  lastUsedAt          DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 enum AuditAction {
   // Auth events
   USER_REGISTER
@@ -278,6 +304,11 @@ enum AuditAction {
   GROUP_CREATED
   GROUP_UPDATED
   GROUP_DELETED
+
+  // Passkey events
+  PASSKEY_REGISTERED
+  PASSKEY_REMOVED
+  PASSKEY_USED
 }
 
 // ============================================================================

@@ -66,6 +66,7 @@ export async function POST(request: Request) {
                 id: result.userId,
                 email: result.email,
             },
+            suggestPasskeySetup: result.suggestPasskeySetup,
         });
     } catch (error) {
         console.error('Login error:', error);

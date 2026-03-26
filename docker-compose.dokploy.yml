@@ -1,41 +1,11 @@
-# Termi - Docker Compose Stack (Dokploy Compatible)
-# Database is managed externally — provide DATABASE_URL via environment/env file
-# Routing is handled by Traefik (Dokploy built-in)
-
 services:
-
-  # ==========================================================================
-  # Redis for Session Cache
-  # ==========================================================================
-  redis:
-    image: redis:7-alpine
-    container_name: termo-redis
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - termo-network
-
-  # ==========================================================================
-  # Guacd - Apache Guacamole Daemon
-  # Provides RDP and VNC proxy functionality
-  # ==========================================================================
   guacd:
     image: guacamole/guacd:1.5.5
     container_name: termo-guacd
     restart: unless-stopped
     networks:
-      - termo-network
+      - dokploy-network
 
-  # ==========================================================================
-  # Termi Web Application (Next.js)
-  # ==========================================================================
   web:
     build:
       context: .
@@ -71,7 +41,6 @@ services:
       # Shared redirect middleware
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
-      - termo-network
       - dokploy-network
 
   # ==========================================================================
@@ -109,14 +78,8 @@ services:
       - "traefik.http.routers.termi-gateway.tls.certresolver=letsencrypt"
       - "traefik.http.services.termi-gateway.loadbalancer.server.port=8080"
     networks:
-      - termo-network
       - dokploy-network
 
 networks:
-  termo-network:
-    driver: bridge
   dokploy-network:
     external: true
-
-volumes:
-  redis_data:

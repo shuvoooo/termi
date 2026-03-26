@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         return successResponse({
             message: 'Login successful',
             user: { id: result.userId, email: result.email },
+            suggestPasskeySetup: result.suggestPasskeySetup,
         });
     } catch (error) {
         console.error('2FA verification error:', error);
