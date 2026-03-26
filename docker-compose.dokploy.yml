@@ -12,9 +12,6 @@ services:
       dockerfile: docker/Dockerfile.web
     container_name: termo-web
     restart: unless-stopped
-    depends_on:
-      redis:
-        condition: service_healthy
     environment:
       # Session & Encryption
       SESSION_SECRET: ${SESSION_SECRET:-change-this-to-a-long-random-string}
