@@ -1,82 +1,79 @@
 {
+    "id": "/",
     "name": "Termi",
     "short_name": "Termi",
     "description": "Secure server management - SSH, SCP, RDP, VNC from your browser",
     "start_url": "/dashboard",
     "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
     "background_color": "#0f172a",
     "theme_color": "#0f172a",
     "orientation": "any",
     "scope": "/",
+    "lang": "en",
     "icons": [
         {
             "src": "/icons/icon-72x72.png",
             "sizes": "72x72",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-96x96.png",
             "sizes": "96x96",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-128x128.png",
             "sizes": "128x128",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-144x144.png",
             "sizes": "144x144",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-152x152.png",
             "sizes": "152x152",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-192x192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-384x384.png",
             "sizes": "384x384",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "/icons/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "categories": [
-        "utilities",
-        "productivity",
-        "developer tools"
-    ],
-    "screenshots": [
-        {
-            "src": "/screenshots/dashboard.png",
-            "sizes": "1280x720",
-            "type": "image/png",
-            "label": "Dashboard view showing server list"
+            "purpose": "any"
         },
         {
-            "src": "/screenshots/terminal.png",
-            "sizes": "1280x720",
+            "src": "/icons/icon-192x192-maskable.png",
+            "sizes": "192x192",
             "type": "image/png",
-            "label": "SSH terminal with mobile keyboard"
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-512x512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
+    "categories": ["utilities", "productivity", "developer-tools"],
     "shortcuts": [
         {
             "name": "Add Server",
@@ -86,11 +83,11 @@
             "icons": [
                 {
                     "src": "/icons/add-server.png",
-                    "sizes": "96x96"
+                    "sizes": "96x96",
+                    "type": "image/png"
                 }
             ]
         }
     ],
-    "related_applications": [],
     "prefer_related_applications": false
 }

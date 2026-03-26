@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Termi — Offline</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0f172a;
+            color: #f1f5f9;
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            max-width: 320px;
+            line-height: 1.6;
+        }
+
+        button {
+            background: #0ea5e9;
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        button:hover { background: #0284c7; }
+
+        .terminal {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            width: 100%;
+            max-width: 360px;
+            text-align: left;
+        }
+
+        .terminal .prompt { color: #0ea5e9; }
+        .terminal .cursor {
+            display: inline-block;
+            width: 0.5em;
+            height: 1em;
+            background: #0ea5e9;
+            vertical-align: text-bottom;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <img src="/icons/icon-192x192.png" alt="Termi" class="icon" />
+
+    <h1>You're offline</h1>
+
+    <p>Termi requires a network connection to manage your servers. Please check your internet connection and try again.</p>
+
+    <div class="terminal">
+        <span class="prompt">❯</span> connecting...<br />
+        <span class="prompt">❯</span> network unreachable<br />
+        <span class="prompt">❯</span> <span class="cursor"></span>
+    </div>
+
+    <button onclick="location.reload()">Retry Connection</button>
+</body>
+</html>

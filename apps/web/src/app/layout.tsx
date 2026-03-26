@@ -7,8 +7,19 @@ export const metadata: Metadata = {
     description: 'Manage your servers securely via SSH, SCP, RDP, and VNC from your browser',
     manifest: '/manifest.json',
     icons: {
-        icon: '/favicon.ico',
-        apple: '/icons/apple-touch-icon.png',
+        icon: [
+            { url: '/favicon.ico', sizes: 'any' },
+            { url: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+            { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+        ],
+        apple: [
+            { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+        ],
+    },
+    appleWebApp: {
+        capable: true,
+        title: 'Termi',
+        statusBarStyle: 'black-translucent',
     },
     openGraph: {
         title: 'Termi - Secure Server Management',
@@ -43,6 +54,9 @@ export default async function RootLayout({
                 {/* Propagate the per-request nonce so Next.js can apply it to
                     any inline scripts it injects during hydration */}
                 <meta name="csp-nonce" content={nonce} />
+                {/* Microsoft tile */}
+                <meta name="msapplication-TileColor" content="#0f172a" />
+                <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
             </head>
             <body className="min-h-screen bg-dark-950 text-white antialiased">
                 {children}
