@@ -8,7 +8,7 @@ import {
     Loader2, Activity, Wifi, WifiOff, Bell, BellOff,
     CheckCircle2, AlertTriangle, Clock, Cpu, MemoryStick,
     HardDrive, ToggleLeft, ToggleRight, Mail, BellRing,
-    RefreshCw, Tv,
+    RefreshCw, Tv, Zap, Play, Server,
 } from 'lucide-react';
 import MetricSparkline from '@/components/monitoring/MetricSparkline';
 
@@ -50,6 +50,33 @@ interface HealthRecord {
     checkedAt: string;
 }
 
+interface BenchmarkHardwareInfo {
+    cpuModel: string;
+    cpuCores: number;
+    cpuThreads: number;
+    cpuFreqMhz: number | null;
+    arch: string;
+    ramTotalBytes: number;
+    diskTotalBytes: number;
+    diskUsedBytes: number;
+    os: string;
+}
+
+interface BenchmarkResults {
+    hardware?: BenchmarkHardwareInfo;
+    cpu?: { sha256MBps: number } | null;
+    ram?: { writeMBps: number; readMBps: number } | null;
+    disk?: { writeMBps: number; readMBps: number } | null;
+    durationMs?: number;
+    error?: string;
+}
+
+type BenchmarkPhase =
+    | 'connecting' | 'hardware' | 'cpu'
+    | 'ram_write' | 'ram_read'
+    | 'disk_write' | 'disk_read'
+    | 'done' | 'error';
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -77,6 +104,63 @@ function formatRelativeTime(dateStr: string | null): string {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h ago`;
     return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes >= 1e12) return `${(bytes / 1e12).toFixed(1)} TB`;
+    if (bytes >= 1e9)  return `${(bytes / 1e9).toFixed(1)} GB`;
+    if (bytes >= 1e6)  return `${(bytes / 1e6).toFixed(1)} MB`;
+    return `${Math.round(bytes / 1e3)} KB`;
+}
+
+const BENCHMARK_PHASES: { key: BenchmarkPhase; label: string }[] = [
+    { key: 'connecting',  label: 'Connect' },
+    { key: 'hardware',    label: 'HW Info' },
+    { key: 'cpu',         label: 'CPU' },
+    { key: 'ram_write',   label: 'RAM W' },
+    { key: 'ram_read',    label: 'RAM R' },
+    { key: 'disk_write',  label: 'Disk W' },
+    { key: 'disk_read',   label: 'Disk R' },
+];
+
+function phaseIndex(phase: BenchmarkPhase | null): number {
+    return BENCHMARK_PHASES.findIndex(p => p.key === phase);
+}
+
+function BenchmarkSpeedCard({
+    label, icon: Icon, color, write, read, unit = 'MB/s',
+}: {
+    label: string;
+    icon: React.ElementType;
+    color: string;
+    write?: number;
+    read?: number;
+    unit?: string;
+}) {
+    return (
+        <div className="card p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <Icon className={`w-4 h-4 ${color}`} />
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{label}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Write</p>
+                    <p className="text-base font-bold tabular-nums text-white">
+                        {write != null ? write : '—'}
+                        {write != null && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
+                    </p>
+                </div>
+                <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Read</p>
+                    <p className="text-base font-bold tabular-nums text-white">
+                        {read != null ? read : '—'}
+                        {read != null && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function MetricCard({
@@ -158,6 +242,12 @@ export default function ServerDetailsPage() {
     const [saving, setSaving] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Benchmark state
+    const [benchRunning, setBenchRunning] = useState(false);
+    const [benchPhase, setBenchPhase] = useState<BenchmarkPhase | null>(null);
+    const [benchMessage, setBenchMessage] = useState('');
+    const [benchResults, setBenchResults] = useState<BenchmarkResults | null>(null);
+
     // Local form state for monitor config
     const [form, setForm] = useState({
         enabled: false,
@@ -218,6 +308,49 @@ export default function ServerDetailsPage() {
             if (data.success) setHealthRecords(data.data.records);
         } finally {
             setRefreshing(false);
+        }
+    };
+
+    // ── Benchmark ──────────────────────────────────────────────────────────
+
+    const handleRunBenchmark = async () => {
+        setBenchRunning(true);
+        setBenchResults(null);
+        setBenchPhase('connecting');
+        setBenchMessage('Connecting via SSH…');
+
+        try {
+            const response = await fetch(`/api/servers/${id}/benchmark`, { method: 'POST' });
+            if (!response.ok || !response.body) {
+                setBenchPhase('error');
+                setBenchMessage('Failed to start benchmark');
+                return;
+            }
+
+            const reader  = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value, { stream: true });
+                for (const line of text.split('\n')) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const event = JSON.parse(line.slice(6));
+                        setBenchPhase(event.phase);
+                        setBenchMessage(event.message ?? '');
+                        if (event.results) {
+                            setBenchResults(prev => ({ ...(prev ?? {}), ...event.results }));
+                        }
+                    } catch { /* ignore malformed SSE line */ }
+                }
+            }
+        } catch {
+            setBenchPhase('error');
+            setBenchMessage('Connection lost');
+        } finally {
+            setBenchRunning(false);
         }
     };
 
@@ -653,6 +786,163 @@ export default function ServerDetailsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Hardware Benchmark ── */}
+            {isSSH && (
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-yellow-400" />
+                            Hardware Benchmark
+                        </h2>
+                        <button
+                            onClick={handleRunBenchmark}
+                            disabled={benchRunning}
+                            className="btn btn-secondary btn-sm gap-1.5"
+                        >
+                            {benchRunning
+                                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</>
+                                : <><Play className="w-3.5 h-3.5" /> Run Benchmark</>
+                            }
+                        </button>
+                    </div>
+
+                    {/* Progress bar */}
+                    {benchRunning && (
+                        <div className="card p-4 mb-3">
+                            <div className="flex items-center gap-3 mb-3">
+                                <Loader2 className="w-4 h-4 animate-spin text-yellow-400 shrink-0" />
+                                <p className="text-sm text-white">{benchMessage}</p>
+                            </div>
+                            <div className="flex gap-1">
+                                {BENCHMARK_PHASES.map((p, i) => {
+                                    const current = phaseIndex(benchPhase);
+                                    const done    = i < current;
+                                    const active  = i === current;
+                                    return (
+                                        <div key={p.key} className="flex-1 flex flex-col items-center gap-1">
+                                            <div className={`h-1 w-full rounded-full transition-colors ${
+                                                done   ? 'bg-yellow-400' :
+                                                active ? 'bg-yellow-400/60 animate-pulse' :
+                                                         'bg-slate-700'
+                                            }`} />
+                                            <span className={`text-[9px] hidden sm:block ${active ? 'text-yellow-400' : done ? 'text-slate-400' : 'text-slate-600'}`}>
+                                                {p.label}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error state */}
+                    {!benchRunning && benchPhase === 'error' && (
+                        <div className="card p-4 flex items-center gap-3 mb-3 border border-red-500/20 bg-red-500/5">
+                            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                            <p className="text-sm text-red-300">{benchMessage}</p>
+                        </div>
+                    )}
+
+                    {/* Results */}
+                    {benchResults && (
+
+                        <div className="space-y-3">
+                            {/* Hardware info */}
+                            {benchResults.hardware && (
+                                <div className="card p-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Server className="w-4 h-4 text-slate-400" />
+                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Hardware</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 flex-1 min-w-[180px]">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">CPU</p>
+                                            <p className="text-sm font-semibold text-white truncate">{benchResults.hardware.cpuModel}</p>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                                {benchResults.hardware.cpuCores}C / {benchResults.hardware.cpuThreads}T
+                                                {benchResults.hardware.cpuFreqMhz
+                                                    ? ` · ${(benchResults.hardware.cpuFreqMhz / 1000).toFixed(1)} GHz`
+                                                    : ''
+                                                }
+                                                {' '}· {benchResults.hardware.arch}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 min-w-[100px]">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">RAM</p>
+                                            <p className="text-sm font-semibold text-white">{formatBytes(benchResults.hardware.ramTotalBytes)}</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 min-w-[130px]">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Disk</p>
+                                            <p className="text-sm font-semibold text-white">{formatBytes(benchResults.hardware.diskTotalBytes)}</p>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">{formatBytes(benchResults.hardware.diskUsedBytes)} used</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 flex-1 min-w-[120px]">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">OS</p>
+                                            <p className="text-sm font-semibold text-white truncate">{benchResults.hardware.os}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CPU throughput */}
+                            {benchResults.cpu && (
+                                <div className="card p-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Cpu className="w-4 h-4 text-violet-400" />
+                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">CPU Throughput</span>
+                                        <span className="text-[10px] text-slate-600 ml-auto">SHA-256 (single-threaded)</span>
+                                    </div>
+                                    <div className="flex items-end gap-2">
+                                        <span className="text-3xl font-bold tabular-nums text-white">{benchResults.cpu.sha256MBps}</span>
+                                        <span className="text-sm text-slate-400 mb-1">MB/s</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* RAM & Disk speed cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {benchResults.ram && (
+                                    <BenchmarkSpeedCard
+                                        label="RAM Bandwidth"
+                                        icon={MemoryStick}
+                                        color="text-amber-400"
+                                        write={benchResults.ram.writeMBps || undefined}
+                                        read={benchResults.ram.readMBps  || undefined}
+                                    />
+                                )}
+                                {benchResults.disk && (
+                                    <BenchmarkSpeedCard
+                                        label="Disk Speed"
+                                        icon={HardDrive}
+                                        color="text-rose-400"
+                                        write={benchResults.disk.writeMBps || undefined}
+                                        read={benchResults.disk.readMBps  || undefined}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            {benchResults.durationMs && (
+                                <p className="text-[11px] text-slate-600 text-right">
+                                    Completed in {(benchResults.durationMs / 1000).toFixed(1)}s · 256 MB test blocks · no software installed
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Empty state */}
+                    {!benchRunning && !benchResults && benchPhase !== 'error' && (
+                        <div className="card p-8 text-center">
+                            <Zap className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">No benchmark data</p>
+                            <p className="text-xs text-slate-600 mt-1">
+                                Measures CPU throughput, RAM bandwidth, and disk I/O agentlessly via SSH
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
