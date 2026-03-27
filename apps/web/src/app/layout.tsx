@@ -3,8 +3,39 @@ import { headers } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Termi - Secure Server Management',
-    description: 'Manage your servers securely via SSH, SCP, RDP, and VNC from your browser',
+    metadataBase: new URL('https://github.com/shuvoooo/termi'),
+    title: {
+        default: 'Termi - Secure Server Management',
+        template: '%s | Termi',
+    },
+    description:
+        'Termi is an open-source, self-hosted server management platform. Manage Linux and Windows servers via SSH, SCP, RDP, and VNC directly from your browser — with AES-256-GCM encryption, TOTP 2FA, and a mobile-ready PWA.',
+    keywords: [
+        'server management',
+        'SSH client',
+        'SCP file transfer',
+        'RDP remote desktop',
+        'VNC viewer',
+        'self-hosted',
+        'open source',
+        'web terminal',
+        'xterm.js',
+        'secure server access',
+        'AES-256 encryption',
+        'TOTP 2FA',
+        'PWA',
+        'Next.js',
+        'developer tools',
+        'Shuvo',
+    ],
+    authors: [
+        {
+            name: 'Shuvo',
+            url: 'https://github.com/shuvoooo',
+        },
+    ],
+    creator: 'Shuvo',
+    publisher: 'Shuvo',
     manifest: '/manifest.json',
     icons: {
         icon: [
@@ -23,13 +54,32 @@ export const metadata: Metadata = {
     },
     openGraph: {
         title: 'Termi - Secure Server Management',
-        description: 'Manage your servers securely via SSH, SCP, RDP, and VNC from your browser',
+        description:
+            'Open-source self-hosted platform to manage servers via SSH, SCP, RDP, and VNC from your browser. Built with Next.js, AES-256-GCM encryption, and TOTP 2FA.',
         type: 'website',
+        url: 'https://github.com/shuvoooo/termi',
+        siteName: 'Termi',
+        locale: 'en_US',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Termi - Secure Server Management',
+        description:
+            'Open-source self-hosted platform to manage servers via SSH, SCP, RDP, and VNC from your browser.',
+        creator: '@shuvoooo',
     },
     robots: {
         index: true,
         follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            'max-snippet': -1,
+            'max-image-preview': 'large',
+            'max-video-preview': -1,
+        },
     },
+    category: 'technology',
 };
 
 export const viewport: Viewport = {
@@ -60,6 +110,61 @@ export default async function RootLayout({
             </head>
             <body className="min-h-screen bg-dark-950 text-white antialiased">
                 {children}
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            '@context': 'https://schema.org',
+                            '@graph': [
+                                {
+                                    '@type': 'SoftwareApplication',
+                                    name: 'Termi',
+                                    applicationCategory: 'DeveloperApplication',
+                                    operatingSystem: 'Any',
+                                    description:
+                                        'Open-source self-hosted server management platform with SSH, SCP, RDP, and VNC support. Features AES-256-GCM encryption, TOTP 2FA, and a mobile-ready PWA.',
+                                    url: 'https://github.com/shuvoooo/termi',
+                                    author: {
+                                        '@type': 'Person',
+                                        name: 'Shuvo',
+                                        email: 'shuvo.punam@gmail.com',
+                                        url: 'https://github.com/shuvoooo',
+                                        sameAs: [
+                                            'https://github.com/shuvoooo',
+                                            'https://www.linkedin.com/in/shuvoooo/',
+                                        ],
+                                    },
+                                    license: 'https://opensource.org/licenses/MIT',
+                                    offers: {
+                                        '@type': 'Offer',
+                                        price: '0',
+                                        priceCurrency: 'USD',
+                                    },
+                                    featureList: [
+                                        'SSH Terminal',
+                                        'SCP File Manager',
+                                        'RDP Remote Desktop',
+                                        'VNC Viewer',
+                                        'AES-256-GCM Encryption',
+                                        'TOTP Two-Factor Authentication',
+                                        'Progressive Web App',
+                                        'Mobile Optimized',
+                                    ],
+                                },
+                                {
+                                    '@type': 'Person',
+                                    name: 'Shuvo',
+                                    email: 'shuvo.punam@gmail.com',
+                                    url: 'https://github.com/shuvoooo',
+                                    sameAs: [
+                                        'https://github.com/shuvoooo',
+                                        'https://www.linkedin.com/in/shuvoooo/',
+                                    ],
+                                },
+                            ],
+                        }),
+                    }}
+                />
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `

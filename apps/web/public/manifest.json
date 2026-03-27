@@ -2,7 +2,7 @@
     "id": "/",
     "name": "Termi",
     "short_name": "Termi",
-    "description": "Secure server management - SSH, SCP, RDP, VNC from your browser",
+    "description": "Open-source self-hosted server management — SSH, SCP, RDP, VNC from your browser. Built by Shuvo.",
     "start_url": "/dashboard",
     "display": "standalone",
     "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],

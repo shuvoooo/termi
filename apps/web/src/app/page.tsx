@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
     Terminal,
@@ -7,7 +8,26 @@ import {
     Lock,
     Zap,
     ArrowRight,
+    Github,
+    Linkedin,
+    Mail,
 } from 'lucide-react';
+
+export const metadata: Metadata = {
+    title: 'Termi - Secure Server Management',
+    description:
+        'Termi is an open-source, self-hosted server management platform. Access your Linux and Windows servers via SSH, SCP, RDP, and VNC directly from your browser with enterprise-grade security.',
+    alternates: {
+        canonical: '/',
+    },
+    openGraph: {
+        title: 'Termi - Secure Server Management',
+        description:
+            'Open-source self-hosted platform to manage servers via SSH, SCP, RDP, and VNC from your browser. Built with AES-256-GCM encryption and TOTP 2FA.',
+        url: '/',
+        type: 'website',
+    },
+};
 
 export default function HomePage() {
     return (
@@ -30,7 +50,7 @@ export default function HomePage() {
                             <Link href="#security" className="text-dark-300 hover:text-white transition-colors">
                                 Security
                             </Link>
-                            <Link href="https://github.com" className="text-dark-300 hover:text-white transition-colors">
+                            <Link href="https://github.com/shuvoooo/termi" className="text-dark-300 hover:text-white transition-colors">
                                 GitHub
                             </Link>
                         </nav>
@@ -209,7 +229,7 @@ export default function HomePage() {
                         <Link href="/register" className="btn btn-primary btn-lg">
                             Create Account
                         </Link>
-                        <Link href="https://github.com" className="btn btn-secondary btn-lg">
+                        <Link href="https://github.com/shuvoooo/termi" className="btn btn-secondary btn-lg">
                             View on GitHub
                         </Link>
                     </div>
@@ -217,25 +237,76 @@ export default function HomePage() {
             </section>
 
             {/* Footer */}
-            <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-dark-800">
-                <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <Terminal className="w-5 h-5 text-primary-500" />
-                        <span className="font-semibold">Termi</span>
-                        <span className="text-dark-500">•</span>
-                        <span className="text-dark-500 text-sm">MIT License</span>
+            <footer className="py-10 px-4 sm:px-6 lg:px-8 border-t border-dark-800">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    {/* Top row */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <Terminal className="w-5 h-5 text-primary-500" />
+                            <span className="font-semibold">Termi</span>
+                            <span className="text-dark-500">•</span>
+                            <span className="text-dark-500 text-sm">MIT License</span>
+                        </div>
+
+                        <div className="flex items-center gap-6 text-sm text-dark-400">
+                            <Link href="/privacy" className="hover:text-white transition-colors">
+                                Privacy
+                            </Link>
+                            <Link href="/security" className="hover:text-white transition-colors">
+                                Security
+                            </Link>
+                            <Link
+                                href="https://github.com/shuvoooo/termi"
+                                className="hover:text-white transition-colors"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                            >
+                                GitHub
+                            </Link>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-6 text-sm text-dark-400">
-                        <Link href="/privacy" className="hover:text-white transition-colors">
-                            Privacy
-                        </Link>
-                        <Link href="/security" className="hover:text-white transition-colors">
-                            Security
-                        </Link>
-                        <Link href="https://github.com" className="hover:text-white transition-colors">
-                            GitHub
-                        </Link>
+                    {/* Developer attribution */}
+                    <div className="border-t border-dark-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-dark-400">
+                        <p>
+                            Built with ❤️ by{' '}
+                            <Link
+                                href="https://github.com/shuvoooo"
+                                className="text-primary-400 hover:text-primary-300 transition-colors font-medium"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                            >
+                                Shuvo
+                            </Link>
+                        </p>
+
+                        <div className="flex items-center gap-4">
+                            <Link
+                                href="https://github.com/shuvoooo"
+                                aria-label="GitHub profile of Shuvo"
+                                className="hover:text-white transition-colors"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                            >
+                                <Github className="w-5 h-5" />
+                            </Link>
+                            <Link
+                                href="https://www.linkedin.com/in/shuvoooo/"
+                                aria-label="LinkedIn profile of Shuvo"
+                                className="hover:text-white transition-colors"
+                                rel="noopener noreferrer"
+                                target="_blank"
+                            >
+                                <Linkedin className="w-5 h-5" />
+                            </Link>
+                            <Link
+                                href="mailto:shuvo.punam@gmail.com"
+                                aria-label="Email Shuvo"
+                                className="hover:text-white transition-colors"
+                            >
+                                <Mail className="w-5 h-5" />
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </footer>
