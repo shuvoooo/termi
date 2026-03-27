@@ -8,6 +8,7 @@ import {
     Star, MoreVertical, Search, RefreshCw,
     Layers, Pencil, Trash2, AlertTriangle,
     LayoutGrid, List, KeyRound, Clock, Wifi, WifiOff, Activity,
+    Copy, Check, User, HardDrive, ArrowDown, ArrowUp, Cpu, MemoryStick,
 } from 'lucide-react';
 import { useSessionsContext } from './sessions-context';
 import dynamic from 'next/dynamic';
@@ -27,6 +28,9 @@ interface ServerItem {
     isFavorite: boolean;
     hasPassword: boolean;
     lastUsedAt: string | null;
+    host: string;
+    username: string;
+    port: number;
     group: {
         id: string;
         name: string;
@@ -61,10 +65,11 @@ const protocolColors = {
 };
 
 function formatBytes(bytes: number): string {
-    if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)}G`;
-    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)}M`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)}K`;
-    return `${bytes}B`;
+    if (bytes >= 1_099_511_627_776) return `${(bytes / 1_099_511_627_776).toFixed(1)} TB`;
+    if (bytes >= 1_073_741_824)     return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
+    if (bytes >= 1_048_576)         return `${(bytes / 1_048_576).toFixed(1)} MB`;
+    if (bytes >= 1024)              return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${bytes} B`;
 }
 
 function formatRelativeTime(dateStr: string | null): string {
@@ -78,23 +83,56 @@ function formatRelativeTime(dateStr: string | null): string {
     return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function MetricBar({ label, percent, value }: { label: string; percent: number; value: string }) {
+function MetricBar({ label, icon: Icon, percent, used, total }: {
+    label: string;
+    icon?: React.ElementType;
+    percent: number;
+    used: string;
+    total?: string;
+}) {
     const color =
         percent >= 90 ? 'bg-red-500' :
         percent >= 70 ? 'bg-yellow-500' :
         'bg-emerald-500';
 
     return (
-        <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] text-dark-400 w-7 shrink-0 font-medium">{label}</span>
-            <div className="flex-1 h-1 bg-dark-700 rounded-full overflow-hidden">
+        <div className="space-y-0.5">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                    {Icon && <Icon className="w-2.5 h-2.5 text-dark-500" />}
+                    <span className="text-[10px] text-dark-400 font-medium">{label}</span>
+                </div>
+                <span className="text-[10px] text-dark-300 tabular-nums">
+                    {total ? <>{used}<span className="text-dark-600"> / {total}</span></> : used}
+                </span>
+            </div>
+            <div className="h-1 bg-dark-700 rounded-full overflow-hidden">
                 <div
                     className={`h-full rounded-full transition-all duration-700 ${color}`}
                     style={{ width: `${Math.min(100, percent)}%` }}
                 />
             </div>
-            <span className="text-[10px] text-dark-300 w-8 text-right shrink-0 tabular-nums">{value}</span>
         </div>
+    );
+}
+
+function CopyButton({ text, className }: { text: string; className?: string }) {
+    const [copied, setCopied] = useState(false);
+    const copy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        });
+    };
+    return (
+        <button
+            onClick={copy}
+            className={`p-0.5 rounded text-dark-500 hover:text-dark-200 transition-colors ${className ?? ''}`}
+            title={`Copy ${text}`}
+        >
+            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+        </button>
     );
 }
 
@@ -142,9 +180,11 @@ function GridCard({
 }) {
     const Icon = protocolIcons[server.protocol];
 
+    const hasMetrics = server.protocol === 'SSH' && m && m.reachable && !m.error;
+
     return (
         <div className="card card-hover group flex flex-col overflow-hidden">
-            <div className="p-4 flex-1">
+            <div className="p-4 flex-1 space-y-3">
                 {/* Title row */}
                 <div className="flex items-start gap-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${protocolColors[server.protocol]}`}>
@@ -153,15 +193,15 @@ function GridCard({
 
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <h3 className="font-medium truncate text-sm leading-tight">{server.name}</h3>
+                            <h3 className="font-semibold truncate text-sm leading-tight">{server.name}</h3>
                             <StatusIndicator metrics={m} loading={mLoading} />
                         </div>
-                        <p className="text-xs text-dark-400 truncate mt-0.5">
-                            {server.description || server.protocol}
-                        </p>
+                        {server.description && (
+                            <p className="text-[11px] text-dark-400 truncate mt-0.5">{server.description}</p>
+                        )}
                     </div>
 
-                    {/* Actions: always-visible star + hover menu */}
+                    {/* Actions */}
                     <div className="flex items-center gap-0.5 shrink-0">
                         <button
                             onClick={onFavorite}
@@ -217,8 +257,24 @@ function GridCard({
                     </div>
                 </div>
 
+                {/* Host / User info */}
+                <div className="rounded-md bg-dark-800/60 border border-dark-700/50 px-2.5 py-2 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <Server className="w-3 h-3 text-dark-500 shrink-0" />
+                            <span className="text-[11px] text-dark-200 font-mono truncate">{server.host}</span>
+                            <span className="text-[10px] text-dark-500 shrink-0">:{server.port}</span>
+                        </div>
+                        <CopyButton text={`${server.host}:${server.port}`} />
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <User className="w-3 h-3 text-dark-500 shrink-0" />
+                        <span className="text-[11px] text-dark-300 font-mono truncate">{server.username}</span>
+                    </div>
+                </div>
+
                 {/* Badges */}
-                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1">
                     <span className={`badge text-[10px] px-1.5 py-0.5 ${protocolColors[server.protocol]}`}>
                         {server.protocol}
                     </span>
@@ -242,21 +298,54 @@ function GridCard({
                 </div>
 
                 {/* SSH Metrics */}
-                {server.protocol === 'SSH' && m && m.reachable && !m.error && (
-                    <div className="mt-3 space-y-1">
-                        {m.cpu != null && <MetricBar label="CPU" percent={m.cpu} value={`${m.cpu}%`} />}
-                        {m.ram && <MetricBar label="RAM" percent={m.ram.percent} value={formatBytes(m.ram.usedBytes)} />}
-                        {m.disk && <MetricBar label="Dsk" percent={m.disk.percent} value={`${m.disk.percent}%`} />}
+                {hasMetrics && (
+                    <div className="space-y-2">
+                        {m!.cpu != null && (
+                            <MetricBar
+                                label="CPU"
+                                icon={Cpu}
+                                percent={m!.cpu}
+                                used={`${m!.cpu}%`}
+                            />
+                        )}
+                        {m!.ram && (
+                            <MetricBar
+                                label="RAM"
+                                icon={MemoryStick}
+                                percent={m!.ram.percent}
+                                used={formatBytes(m!.ram.usedBytes)}
+                                total={formatBytes(m!.ram.totalBytes)}
+                            />
+                        )}
+                        {m!.disk && (
+                            <MetricBar
+                                label="Disk"
+                                icon={HardDrive}
+                                percent={m!.disk.percent}
+                                used={formatBytes(m!.disk.usedBytes)}
+                                total={formatBytes(m!.disk.totalBytes)}
+                            />
+                        )}
+                        {m!.network && (
+                            <div className="flex items-center gap-3 text-[10px] text-dark-400">
+                                <span className="flex items-center gap-1">
+                                    <ArrowDown className="w-2.5 h-2.5 text-emerald-500" />
+                                    {formatBytes(m!.network.rxBytes)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <ArrowUp className="w-2.5 h-2.5 text-blue-400" />
+                                    {formatBytes(m!.network.txBytes)}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Last used */}
-                {server.lastUsedAt && (
-                    <div className="mt-2.5 flex items-center gap-1 text-[10px] text-dark-500">
-                        <Clock className="w-3 h-3" />
-                        {formatRelativeTime(server.lastUsedAt)}
-                    </div>
-                )}
+                <div className="flex items-center gap-1 text-[10px] text-dark-500">
+                    <Clock className="w-3 h-3" />
+                    {formatRelativeTime(server.lastUsedAt)}
+                </div>
             </div>
 
             {/* Footer */}
@@ -319,15 +408,17 @@ function ListRow({
                 <Icon className="w-3.5 h-3.5" />
             </div>
 
-            {/* Name + description */}
+            {/* Name + host */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{server.name}</span>
                     <StatusIndicator metrics={m} loading={mLoading} />
                 </div>
-                <p className="text-xs text-dark-400 truncate">
-                    {server.description || server.protocol}
-                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[11px] text-dark-400 font-mono truncate">{server.username}@{server.host}</span>
+                    <span className="text-[10px] text-dark-600 shrink-0">:{server.port}</span>
+                    <CopyButton text={`${server.host}:${server.port}`} />
+                </div>
             </div>
 
             {/* Group / tags — hidden on small screens */}
@@ -352,16 +443,25 @@ function ListRow({
 
             {/* SSH inline metrics — hidden on small screens */}
             {server.protocol === 'SSH' && m && m.reachable && !m.error && (
-                <div className="hidden xl:flex items-center gap-3 w-40 shrink-0">
+                <div className="hidden xl:flex items-center gap-3 shrink-0">
                     {m.cpu != null && (
-                        <div className="flex items-center gap-1 text-[10px] text-dark-400 tabular-nums">
-                            <span className={`w-1.5 h-1.5 rounded-full ${m.cpu >= 90 ? 'bg-red-500' : m.cpu >= 70 ? 'bg-yellow-500' : 'bg-emerald-500'}`} />
-                            {m.cpu}%
+                        <div className="flex items-center gap-1 text-[10px] tabular-nums">
+                            <Cpu className="w-3 h-3 text-dark-500" />
+                            <span className={m.cpu >= 90 ? 'text-red-400' : m.cpu >= 70 ? 'text-yellow-400' : 'text-dark-300'}>
+                                {m.cpu}%
+                            </span>
                         </div>
                     )}
                     {m.ram && (
                         <div className="flex items-center gap-1 text-[10px] text-dark-400 tabular-nums">
-                            RAM {formatBytes(m.ram.usedBytes)}
+                            <MemoryStick className="w-3 h-3 text-dark-500" />
+                            {formatBytes(m.ram.usedBytes)}<span className="text-dark-600">/{formatBytes(m.ram.totalBytes)}</span>
+                        </div>
+                    )}
+                    {m.disk && (
+                        <div className="flex items-center gap-1 text-[10px] text-dark-400 tabular-nums">
+                            <HardDrive className="w-3 h-3 text-dark-500" />
+                            {formatBytes(m.disk.usedBytes)}<span className="text-dark-600">/{formatBytes(m.disk.totalBytes)}</span>
                         </div>
                     )}
                 </div>

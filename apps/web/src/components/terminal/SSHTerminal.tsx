@@ -210,13 +210,15 @@ export default function SSHTerminal({
         };
     }, [connect]);
 
-    // Send ping every 30 seconds
+    // Send ping every 20 seconds to keep the gateway idle timer alive.
+    // Must be shorter than the gateway's 5-minute SSH timeout (300 s) with enough
+    // margin so a slow ping never races against the timer.
     useEffect(() => {
         const interval = setInterval(() => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
                 wsRef.current.send(JSON.stringify({ type: 'ping' }));
             }
-        }, 30000);
+        }, 20000);
 
         return () => clearInterval(interval);
     }, []);

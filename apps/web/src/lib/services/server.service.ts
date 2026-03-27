@@ -64,6 +64,9 @@ export interface ServerListItem {
     isFavorite: boolean;
     lastUsedAt: Date | null;
     hasPassword: boolean;
+    host: string;
+    username: string;
+    port: number;
     group: {
         id: string;
         name: string;
@@ -146,6 +149,9 @@ export async function getServers(userId: string): Promise<ServerListItem[]> {
             isFavorite: true,
             lastUsedAt: true,
             password: true,
+            host: true,
+            username: true,
+            port: true,
             group: {
                 select: {
                     id: true,
@@ -160,7 +166,10 @@ export async function getServers(userId: string): Promise<ServerListItem[]> {
             { name: 'asc' },
         ],
     });
-    return rows.map(({ password, ...rest }) => ({ ...rest, hasPassword: !!password }));
+    return rows.map(({ password, host, username, ...rest }) => {
+        const creds = decryptCredentials({ host, username });
+        return { ...rest, hasPassword: !!password, host: creds.host, username: creds.username };
+    });
 }
 
 export async function getServerById(
@@ -415,6 +424,9 @@ export async function searchServers(
             isFavorite: true,
             lastUsedAt: true,
             password: true,
+            host: true,
+            username: true,
+            port: true,
             group: {
                 select: {
                     id: true,
@@ -429,7 +441,10 @@ export async function searchServers(
             { name: 'asc' },
         ],
     });
-    return rows.map(({ password, ...rest }) => ({ ...rest, hasPassword: !!password }));
+    return rows.map(({ password, host, username, ...rest }) => {
+        const creds = decryptCredentials({ host, username });
+        return { ...rest, hasPassword: !!password, host: creds.host, username: creds.username };
+    });
 }
 
 // ============================================================================

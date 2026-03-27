@@ -29,7 +29,8 @@ export class SSHHandler {
             port: token.port,
             username: token.username,
             readyTimeout: 10000,
-            keepaliveInterval: 10000,
+            keepaliveInterval: 15000,  // send SSH keepalive every 15 s
+            keepaliveCountMax: 6,       // allow up to 6 missed keepalives (~90 s) before giving up
         };
 
         // Use password or private key
