@@ -26,7 +26,7 @@ const HOST = process.env.GATEWAY_HOST || '0.0.0.0';
 
 // Connection limits
 const MAX_CONNECTIONS_PER_USER = 10;
-const CONNECTION_TIMEOUT = 30000; // 30 seconds
+const CONNECTION_TIMEOUT = 300000; // 5 minutes — covers AWS NAT/NLB idle TCP timeout (~350 s)
 
 // ============================================================================
 // TYPES
@@ -182,8 +182,8 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
         if (timeoutId) clearTimeout(timeoutId);
         // RDP/VNC sessions may be idle for longer than SSH; give them extra headroom
         const idleLimit = (protocol === 'rdp' || protocol === 'vnc')
-            ? CONNECTION_TIMEOUT * 10  // 5 minutes
-            : CONNECTION_TIMEOUT;       // 30 seconds
+            ? CONNECTION_TIMEOUT * 2   // 10 minutes
+            : CONNECTION_TIMEOUT;      // 5 minutes
         timeoutId = setTimeout(() => {
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({

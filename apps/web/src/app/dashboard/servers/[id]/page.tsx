@@ -55,6 +55,7 @@ interface BenchmarkHardwareInfo {
     cpuCores: number;
     cpuThreads: number;
     cpuFreqMhz: number | null;
+    cpuBaseFreqMhz: number | null;
     arch: string;
     ramTotalBytes: number;
     diskTotalBytes: number;
@@ -62,19 +63,43 @@ interface BenchmarkHardwareInfo {
     os: string;
 }
 
+interface BenchmarkCpuResult {
+    singleCoreMBps: number;
+    multiCoreMBps: number;
+    score: number;
+}
+
+interface BenchmarkNetworkResult {
+    pingMs: number | null;
+    loopbackMBps: number | null;
+    score: number;
+}
+
+interface BenchmarkScores {
+    cpu: number;
+    ram: number;
+    disk: number;
+    network: number;
+    overall: number;
+}
+
 interface BenchmarkResults {
     hardware?: BenchmarkHardwareInfo;
-    cpu?: { sha256MBps: number } | null;
-    ram?: { writeMBps: number; readMBps: number } | null;
-    disk?: { writeMBps: number; readMBps: number } | null;
+    cpu?: BenchmarkCpuResult | null;
+    ram?: { writeMBps: number; readMBps: number; score: number } | null;
+    disk?: { writeMBps: number; readMBps: number; score: number } | null;
+    network?: BenchmarkNetworkResult | null;
+    scores?: BenchmarkScores | null;
     durationMs?: number;
     error?: string;
 }
 
 type BenchmarkPhase =
-    | 'connecting' | 'hardware' | 'cpu'
+    | 'connecting' | 'hardware'
+    | 'cpu_single' | 'cpu_multi'
     | 'ram_write' | 'ram_read'
     | 'disk_write' | 'disk_read'
+    | 'network'
     | 'done' | 'error';
 
 // ============================================================================
@@ -116,52 +141,41 @@ function formatBytes(bytes: number): string {
 const BENCHMARK_PHASES: { key: BenchmarkPhase; label: string }[] = [
     { key: 'connecting',  label: 'Connect' },
     { key: 'hardware',    label: 'HW Info' },
-    { key: 'cpu',         label: 'CPU' },
+    { key: 'cpu_single',  label: 'CPU 1C' },
+    { key: 'cpu_multi',   label: 'CPU NC' },
     { key: 'ram_write',   label: 'RAM W' },
     { key: 'ram_read',    label: 'RAM R' },
     { key: 'disk_write',  label: 'Disk W' },
     { key: 'disk_read',   label: 'Disk R' },
+    { key: 'network',     label: 'Network' },
 ];
 
 function phaseIndex(phase: BenchmarkPhase | null): number {
     return BENCHMARK_PHASES.findIndex(p => p.key === phase);
 }
 
-function BenchmarkSpeedCard({
-    label, icon: Icon, color, write, read, unit = 'MB/s',
-}: {
-    label: string;
-    icon: React.ElementType;
-    color: string;
-    write?: number;
-    read?: number;
-    unit?: string;
-}) {
+function scoreColor(score: number): string {
+    if (score >= 800) return 'text-emerald-400';
+    if (score >= 600) return 'text-yellow-400';
+    if (score >= 400) return 'text-amber-400';
+    return 'text-red-400';
+}
+
+function scoreBg(score: number): string {
+    if (score >= 800) return 'bg-emerald-500/10 border-emerald-500/20';
+    if (score >= 600) return 'bg-yellow-500/10 border-yellow-500/20';
+    if (score >= 400) return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-red-500/10 border-red-500/20';
+}
+
+function ScoreBadge({ score }: { score: number }) {
     return (
-        <div className="card p-4">
-            <div className="flex items-center gap-2 mb-3">
-                <Icon className={`w-4 h-4 ${color}`} />
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{label}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Write</p>
-                    <p className="text-base font-bold tabular-nums text-white">
-                        {write != null ? write : '—'}
-                        {write != null && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
-                    </p>
-                </div>
-                <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Read</p>
-                    <p className="text-base font-bold tabular-nums text-white">
-                        {read != null ? read : '—'}
-                        {read != null && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
-                    </p>
-                </div>
-            </div>
-        </div>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-sm font-bold tabular-nums ${scoreColor(score)} ${scoreBg(score)}`}>
+            {score}
+        </span>
     );
 }
+
 
 function MetricCard({
     label,
@@ -846,8 +860,51 @@ export default function ServerDetailsPage() {
 
                     {/* Results */}
                     {benchResults && (
-
                         <div className="space-y-3">
+
+                            {/* Overall score */}
+                            {benchResults.scores && (
+                                <div className="card p-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Zap className="w-4 h-4 text-yellow-400" />
+                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Benchmark Score</span>
+                                        <span className="text-[10px] text-slate-500 ml-auto">scored vs. high-end server reference</span>
+                                    </div>
+                                    {/* Overall big score */}
+                                    <div className="flex items-center justify-center mb-4">
+                                        <div className={`flex flex-col items-center px-8 py-4 rounded-2xl border-2 ${scoreBg(benchResults.scores.overall)}`}>
+                                            <span className={`text-5xl font-black tabular-nums ${scoreColor(benchResults.scores.overall)}`}>
+                                                {benchResults.scores.overall}
+                                            </span>
+                                            <span className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Overall</span>
+                                        </div>
+                                    </div>
+                                    {/* Per-category scores */}
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {([
+                                            { label: 'CPU',     score: benchResults.scores.cpu },
+                                            { label: 'RAM',     score: benchResults.scores.ram },
+                                            { label: 'Disk',    score: benchResults.scores.disk },
+                                            { label: 'Network', score: benchResults.scores.network },
+                                        ] as const).map(({ label, score }) => (
+                                            <div key={label} className="flex flex-col items-center gap-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 py-3">
+                                                <span className={`text-xl font-bold tabular-nums ${scoreColor(score)}`}>{score}</span>
+                                                <span className="text-[10px] text-slate-500 uppercase tracking-wide">{label}</span>
+                                                {/* Mini bar */}
+                                                <div className="w-full px-3">
+                                                    <div className="h-1 rounded-full bg-slate-700">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all ${score >= 800 ? 'bg-emerald-400' : score >= 600 ? 'bg-yellow-400' : score >= 400 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                                            style={{ width: `${score / 10}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Hardware info */}
                             {benchResults.hardware && (
                                 <div className="card p-4">
@@ -856,17 +913,24 @@ export default function ServerDetailsPage() {
                                         <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Hardware</span>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 flex-1 min-w-[180px]">
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 flex-1 min-w-[200px]">
                                             <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">CPU</p>
                                             <p className="text-sm font-semibold text-white truncate">{benchResults.hardware.cpuModel}</p>
                                             <p className="text-[11px] text-slate-500 mt-0.5">
                                                 {benchResults.hardware.cpuCores}C / {benchResults.hardware.cpuThreads}T
-                                                {benchResults.hardware.cpuFreqMhz
-                                                    ? ` · ${(benchResults.hardware.cpuFreqMhz / 1000).toFixed(1)} GHz`
-                                                    : ''
-                                                }
-                                                {' '}· {benchResults.hardware.arch}
+                                                {' · '}{benchResults.hardware.arch}
                                             </p>
+                                            {(benchResults.hardware.cpuFreqMhz || benchResults.hardware.cpuBaseFreqMhz) && (
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    {benchResults.hardware.cpuBaseFreqMhz
+                                                        ? `${(benchResults.hardware.cpuBaseFreqMhz / 1000).toFixed(2)} GHz base`
+                                                        : ''}
+                                                    {benchResults.hardware.cpuBaseFreqMhz && benchResults.hardware.cpuFreqMhz ? ' · ' : ''}
+                                                    {benchResults.hardware.cpuFreqMhz
+                                                        ? `${(benchResults.hardware.cpuFreqMhz / 1000).toFixed(2)} GHz boost`
+                                                        : ''}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 min-w-[100px]">
                                             <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">RAM</p>
@@ -885,42 +949,136 @@ export default function ServerDetailsPage() {
                                 </div>
                             )}
 
-                            {/* CPU throughput */}
+                            {/* CPU performance */}
                             {benchResults.cpu && (
                                 <div className="card p-4">
                                     <div className="flex items-center gap-2 mb-3">
                                         <Cpu className="w-4 h-4 text-violet-400" />
-                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">CPU Throughput</span>
-                                        <span className="text-[10px] text-slate-600 ml-auto">SHA-256 (single-threaded)</span>
+                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">CPU Performance</span>
+                                        <span className="text-[10px] text-slate-500 ml-1">SHA-256</span>
+                                        <div className="ml-auto">
+                                            <ScoreBadge score={benchResults.cpu.score} />
+                                        </div>
                                     </div>
-                                    <div className="flex items-end gap-2">
-                                        <span className="text-3xl font-bold tabular-nums text-white">{benchResults.cpu.sha256MBps}</span>
-                                        <span className="text-sm text-slate-400 mb-1">MB/s</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Single-Core</p>
+                                            <p className="text-lg font-bold tabular-nums text-white">
+                                                {benchResults.cpu.singleCoreMBps.toLocaleString()}
+                                                <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>
+                                            </p>
+                                            <p className="text-[10px] text-slate-600 mt-0.5">1 thread</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Multi-Core</p>
+                                            <p className="text-lg font-bold tabular-nums text-white">
+                                                {benchResults.cpu.multiCoreMBps.toLocaleString()}
+                                                <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>
+                                            </p>
+                                            {benchResults.hardware && (
+                                                <p className="text-[10px] text-slate-600 mt-0.5">
+                                                    {benchResults.hardware.cpuThreads} threads
+                                                    {benchResults.cpu.singleCoreMBps > 0
+                                                        ? ` · ${(benchResults.cpu.multiCoreMBps / benchResults.cpu.singleCoreMBps).toFixed(1)}× scaling`
+                                                        : ''}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* RAM & Disk speed cards */}
+                            {/* RAM & Disk */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {benchResults.ram && (
-                                    <BenchmarkSpeedCard
-                                        label="RAM Bandwidth"
-                                        icon={MemoryStick}
-                                        color="text-amber-400"
-                                        write={benchResults.ram.writeMBps || undefined}
-                                        read={benchResults.ram.readMBps  || undefined}
-                                    />
+                                    <div className="card p-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <MemoryStick className="w-4 h-4 text-amber-400" />
+                                            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">RAM Bandwidth</span>
+                                            <div className="ml-auto">
+                                                <ScoreBadge score={benchResults.ram.score} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Write</p>
+                                                <p className="text-base font-bold tabular-nums text-white">
+                                                    {benchResults.ram.writeMBps > 0 ? benchResults.ram.writeMBps.toLocaleString() : '—'}
+                                                    {benchResults.ram.writeMBps > 0 && <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Read</p>
+                                                <p className="text-base font-bold tabular-nums text-white">
+                                                    {benchResults.ram.readMBps > 0 ? benchResults.ram.readMBps.toLocaleString() : '—'}
+                                                    {benchResults.ram.readMBps > 0 && <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                                 {benchResults.disk && (
-                                    <BenchmarkSpeedCard
-                                        label="Disk Speed"
-                                        icon={HardDrive}
-                                        color="text-rose-400"
-                                        write={benchResults.disk.writeMBps || undefined}
-                                        read={benchResults.disk.readMBps  || undefined}
-                                    />
+                                    <div className="card p-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <HardDrive className="w-4 h-4 text-rose-400" />
+                                            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Disk Speed</span>
+                                            <div className="ml-auto">
+                                                <ScoreBadge score={benchResults.disk.score} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Write</p>
+                                                <p className="text-base font-bold tabular-nums text-white">
+                                                    {benchResults.disk.writeMBps > 0 ? benchResults.disk.writeMBps.toLocaleString() : '—'}
+                                                    {benchResults.disk.writeMBps > 0 && <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Read</p>
+                                                <p className="text-base font-bold tabular-nums text-white">
+                                                    {benchResults.disk.readMBps > 0 ? benchResults.disk.readMBps.toLocaleString() : '—'}
+                                                    {benchResults.disk.readMBps > 0 && <span className="text-xs font-normal text-slate-400 ml-1">MB/s</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
+
+                            {/* Network */}
+                            {benchResults.network && (
+                                <div className="card p-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Wifi className="w-4 h-4 text-sky-400" />
+                                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Network</span>
+                                        <div className="ml-auto">
+                                            <ScoreBadge score={benchResults.network.score} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Latency (ping 1.1.1.1)</p>
+                                            <p className="text-base font-bold tabular-nums text-white">
+                                                {benchResults.network.pingMs != null
+                                                    ? <>{benchResults.network.pingMs.toFixed(1)}<span className="text-xs font-normal text-slate-400 ml-1">ms</span></>
+                                                    : <span className="text-slate-500">Unreachable</span>
+                                                }
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Loopback Bandwidth</p>
+                                            <p className="text-base font-bold tabular-nums text-white">
+                                                {benchResults.network.loopbackMBps != null
+                                                    ? <>{benchResults.network.loopbackMBps.toLocaleString()}<span className="text-xs font-normal text-slate-400 ml-1">MB/s</span></>
+                                                    : <span className="text-slate-500">N/A</span>
+                                                }
+                                            </p>
+                                            <p className="text-[10px] text-slate-600 mt-0.5">OS kernel socket speed</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Footer */}
                             {benchResults.durationMs && (
@@ -937,7 +1095,7 @@ export default function ServerDetailsPage() {
                             <Zap className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                             <p className="text-sm text-slate-500">No benchmark data</p>
                             <p className="text-xs text-slate-600 mt-1">
-                                Measures CPU throughput, RAM bandwidth, and disk I/O agentlessly via SSH
+                                Measures CPU single/multi-core, RAM, disk, and network — agentlessly via SSH
                             </p>
                         </div>
                     )}
