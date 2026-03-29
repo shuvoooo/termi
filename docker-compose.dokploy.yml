@@ -11,6 +11,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
+        ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://example.com}
         NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         SESSION_SECRET: ${SESSION_SECRET:-build-time-placeholder-not-used-in-runtime-x}
@@ -81,6 +82,7 @@ services:
     depends_on:
       - guacd
     environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://example.com}
       # Gateway Settings
       GATEWAY_PORT: 8080
       GATEWAY_HOST: 0.0.0.0
