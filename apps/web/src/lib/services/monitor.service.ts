@@ -129,8 +129,9 @@ async function checkServer(cfg: MonitorConfig, now: Date): Promise<void> {
     if (reachable && cfg.server.protocol === 'SSH') {
         try {
             const metrics = await getSSHMetrics({
+                id:        cfg.serverId,
                 host,
-                port: cfg.server.port,
+                port:      cfg.server.port,
                 username,
                 password,
                 privateKey,

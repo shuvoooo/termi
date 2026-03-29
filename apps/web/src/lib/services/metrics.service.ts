@@ -6,7 +6,7 @@
  */
 
 import * as net from 'net';
-import { Client, ConnectConfig } from 'ssh2';
+import { sshPool, SSHPoolConfig } from './ssh-pool';
 
 // ============================================================================
 // TYPES
@@ -92,140 +92,109 @@ const SSH_METRICS_CMD = [
     `printf '%s\\n' "$(dmidecode -t memory 2>/dev/null | grep -i 'configured.*speed' | grep -vE 'Unknown|0 MT' | head -1 | grep -oE '[0-9]+' | head -1)"`,
 ].join('; ');
 
-interface SSHConfig {
-    host: string;
-    port: number;
-    username: string;
-    password?: string;
-    privateKey?: string;
-    passphrase?: string;
-}
+interface SSHConfig extends SSHPoolConfig {}
 
 export function getSSHMetrics(
     config: SSHConfig,
     timeoutMs = 12000
 ): Promise<ServerMetrics> {
     return new Promise((resolve) => {
-        const client = new Client();
-        let settled = false;
+        let poolKey: string | undefined;
+        let released = false;
 
         const done = (metrics: ServerMetrics) => {
-            if (!settled) {
-                settled = true;
-                clearTimeout(timer);
-                // Resolve BEFORE ending the client so the Promise always settles
-                // even if client.end() throws on an already-closed socket.
-                resolve(metrics);
-                try { client.end(); } catch { /* ignore – socket may already be gone */ }
+            if (!released) {
+                released = true;
+                if (poolKey) sshPool.release(poolKey);
             }
+            resolve(metrics);
         };
 
-        const timer = setTimeout(() => {
-            done({ reachable: true, error: 'Metrics collection timed out' });
-        }, timeoutMs);
+        sshPool
+            .acquire(config)
+            .then(({ client, key }) => {
+                poolKey = key;
 
-        client.on('ready', () => {
-            client.exec(SSH_METRICS_CMD, (err, stream) => {
-                if (err) {
-                    done({ reachable: true, error: 'Failed to execute metrics command' });
-                    return;
-                }
+                const timer = setTimeout(() => {
+                    done({ reachable: true, error: 'Metrics collection timed out' });
+                }, timeoutMs);
 
-                let output = '';
-                stream.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-                stream.stderr.on('data', () => { /* ignore */ });
-
-                stream.on('close', () => {
-                    try {
-                        const lines = output.trim().split('\n');
-                        if (lines.length < 5) {
-                            done({ reachable: true, error: 'Incomplete metrics output' });
-                            return;
-                        }
-
-                        const [total1, idle1] = lines[0].trim().split(/\s+/).map(Number);
-                        const [total2, idle2] = lines[1].trim().split(/\s+/).map(Number);
-                        const [memTotal, memAvail] = lines[2].trim().split(/\s+/).map(Number);
-                        const [diskTotal, diskUsed] = lines[3].trim().split(/\s+/).map(Number);
-                        const [rxBytes, txBytes] = lines[4].trim().split(/\s+/).map(Number);
-
-                        // Optional hardware info (lines 5 and 6)
-                        const cpuModel = lines[5]?.trim() || undefined;
-                        const ramSpeedRaw = lines[6]?.trim();
-                        const ramSpeedMhz = ramSpeedRaw ? (parseInt(ramSpeedRaw, 10) || undefined) : undefined;
-
-                        const dtotal = total2 - total1;
-                        const didle = idle2 - idle1;
-                        const cpu = dtotal > 0
-                            ? Math.min(100, Math.max(0, Math.round(((dtotal - didle) / dtotal) * 100)))
-                            : 0;
-
-                        const ramUsed = memTotal - memAvail;
-
-                        done({
-                            reachable: true,
-                            cpu,
-                            cpuModel,
-                            ram: {
-                                usedBytes: ramUsed,
-                                totalBytes: memTotal,
-                                percent: memTotal > 0
-                                    ? Math.round((ramUsed / memTotal) * 100)
-                                    : 0,
-                                speedMhz: ramSpeedMhz,
-                            },
-                            disk: {
-                                usedBytes: diskUsed,
-                                totalBytes: diskTotal,
-                                percent: diskTotal > 0
-                                    ? Math.round((diskUsed / diskTotal) * 100)
-                                    : 0,
-                            },
-                            network: { rxBytes, txBytes },
-                        });
-                    } catch {
-                        done({ reachable: true, error: 'Failed to parse metrics output' });
+                client.exec(SSH_METRICS_CMD, (err, stream) => {
+                    if (err) {
+                        clearTimeout(timer);
+                        done({ reachable: true, error: 'Failed to execute metrics command' });
+                        return;
                     }
+
+                    let output = '';
+                    stream.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+                    stream.stderr.on('data', () => { /* ignore */ });
+
+                    stream.on('close', () => {
+                        clearTimeout(timer);
+                        try {
+                            const lines = output.trim().split('\n');
+                            if (lines.length < 5) {
+                                done({ reachable: true, error: 'Incomplete metrics output' });
+                                return;
+                            }
+
+                            const [total1, idle1] = lines[0].trim().split(/\s+/).map(Number);
+                            const [total2, idle2] = lines[1].trim().split(/\s+/).map(Number);
+                            const [memTotal, memAvail] = lines[2].trim().split(/\s+/).map(Number);
+                            const [diskTotal, diskUsed] = lines[3].trim().split(/\s+/).map(Number);
+                            const [rxBytes, txBytes] = lines[4].trim().split(/\s+/).map(Number);
+
+                            // Optional hardware info (lines 5 and 6)
+                            const cpuModel = lines[5]?.trim() || undefined;
+                            const ramSpeedRaw = lines[6]?.trim();
+                            const ramSpeedMhz = ramSpeedRaw ? (parseInt(ramSpeedRaw, 10) || undefined) : undefined;
+
+                            const dtotal = total2 - total1;
+                            const didle  = idle2 - idle1;
+                            const cpu = dtotal > 0
+                                ? Math.min(100, Math.max(0, Math.round(((dtotal - didle) / dtotal) * 100)))
+                                : 0;
+
+                            const ramUsed = memTotal - memAvail;
+
+                            done({
+                                reachable: true,
+                                cpu,
+                                cpuModel,
+                                ram: {
+                                    usedBytes:  ramUsed,
+                                    totalBytes: memTotal,
+                                    percent: memTotal > 0
+                                        ? Math.round((ramUsed / memTotal) * 100)
+                                        : 0,
+                                    speedMhz: ramSpeedMhz,
+                                },
+                                disk: {
+                                    usedBytes:  diskUsed,
+                                    totalBytes: diskTotal,
+                                    percent: diskTotal > 0
+                                        ? Math.round((diskUsed / diskTotal) * 100)
+                                        : 0,
+                                },
+                                network: { rxBytes, txBytes },
+                            });
+                        } catch {
+                            done({ reachable: true, error: 'Failed to parse metrics output' });
+                        }
+                    });
+
+                    stream.on('error', () => {
+                        clearTimeout(timer);
+                        done({ reachable: true, error: 'Stream error during metrics collection' });
+                    });
+                });
+            })
+            .catch((err) => {
+                resolve({
+                    reachable: true,
+                    error: `SSH connect error: ${err instanceof Error ? err.message : String(err)}`,
                 });
             });
-        });
-
-        client.on('error', (err) => {
-            done({ reachable: true, error: `SSH error: ${err.message}` });
-        });
-
-        if (config.password) {
-            client.on('keyboard-interactive', (_name, _instructions, _lang, _prompts, finish) => {
-                finish([config.password!]);
-            });
-        }
-
-        const connectConfig: ConnectConfig = {
-            host: config.host,
-            port: config.port,
-            username: config.username,
-            readyTimeout: timeoutMs,
-        };
-
-        if (config.privateKey?.trim()) {
-            connectConfig.privateKey = config.privateKey;
-            if (config.passphrase?.trim()) connectConfig.passphrase = config.passphrase;
-        }
-
-        if (config.password?.trim()) {
-            connectConfig.password = config.password;
-            connectConfig.tryKeyboard = true;
-        }
-
-        try {
-            client.connect(connectConfig);
-        } catch (err) {
-            // client.connect() can throw synchronously if the private key is
-            // malformed (e.g. wrong decryption key produced garbage).
-            done({
-                reachable: true,
-                error: `SSH connect error: ${err instanceof Error ? err.message : String(err)}`,
-            });
-        }
     });
 }

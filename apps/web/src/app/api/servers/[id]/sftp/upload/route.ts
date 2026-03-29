@@ -61,10 +61,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         await uploadBuffer(
             {
-                host: server.host,
-                port: server.port,
-                username: server.username,
-                password: server.password ?? undefined,
+                id:         server.id,
+                host:       server.host,
+                port:       server.port,
+                username:   server.username,
+                password:   server.password ?? undefined,
                 privateKey: server.privateKey ?? undefined,
                 passphrase: server.passphrase ?? undefined,
             },

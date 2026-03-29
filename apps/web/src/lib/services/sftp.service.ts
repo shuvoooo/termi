@@ -2,98 +2,50 @@
  * SFTP Service
  *
  * Agentless file transfer via SSH2's SFTP subsystem.
- * Each exported function opens a fresh connection, performs the operation,
- * and closes the connection — no persistent state.
+ * All operations share a pooled SSH connection (via ssh-pool) so repeated
+ * file-manager actions do not re-authenticate on every request.
  */
 
-import { Client, ConnectConfig, SFTPWrapper } from 'ssh2';
+import { SFTPWrapper } from 'ssh2';
+import { sshPool, SSHPoolConfig } from './ssh-pool';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface SFTPConfig {
-    host: string;
-    port: number;
-    username: string;
-    password?: string;
-    privateKey?: string;
-    passphrase?: string;
-}
+export interface SFTPConfig extends SSHPoolConfig {}
 
 export interface RemoteEntry {
     name: string;
     path: string;
     type: 'file' | 'dir' | 'symlink' | 'other';
     size: number;
-    modifiedAt: number; // unix timestamp (seconds)
-    permissions: string; // e.g. "drwxr-xr-x"
+    modifiedAt: number;
+    permissions: string;
     mode: number;
 }
 
 // ============================================================================
-// CONNECTION
+// POOLED SFTP HELPER
 // ============================================================================
 
-interface OpenedSFTP {
-    sftp: SFTPWrapper;
-    client: Client;
-}
-
-function openSFTP(config: SFTPConfig, timeoutMs = 15000): Promise<OpenedSFTP> {
-    return new Promise((resolve, reject) => {
-        const client = new Client();
-
-        const timer = setTimeout(() => {
-            client.destroy();
-            reject(new Error('SSH connection timed out'));
-        }, timeoutMs);
-
-        client.on('ready', () => {
-            client.sftp((err, sftp) => {
-                clearTimeout(timer);
-                if (err) { client.end(); reject(err); return; }
-                resolve({ sftp, client });
-            });
-        });
-
-        client.on('error', (err) => {
-            clearTimeout(timer);
-            reject(err);
-        });
-
-        // Many servers (Ubuntu/Debian default sshd) advertise keyboard-interactive
-        // instead of plain password auth. Handling this event makes the password
-        // work transparently regardless of which method the server prefers.
-        if (config.password) {
-            client.on('keyboard-interactive', (_name, _instructions, _lang, _prompts, finish) => {
-                finish([config.password!]);
-            });
-        }
-
-        const cc: ConnectConfig = {
-            host: config.host,
-            port: config.port,
-            username: config.username,
-            readyTimeout: timeoutMs,
-        };
-
-        // Set key auth if private key is present (non-empty string)
-        if (config.privateKey?.trim()) {
-            cc.privateKey = config.privateKey;
-            if (config.passphrase?.trim()) cc.passphrase = config.passphrase;
-        }
-
-        // Set password auth if password is present.
-        // Also enable tryKeyboard so ssh2 attempts keyboard-interactive,
-        // which is handled by the event listener above.
-        if (config.password?.trim()) {
-            cc.password = config.password;
-            cc.tryKeyboard = true;
-        }
-
-        client.connect(cc);
-    });
+/**
+ * Acquire a pooled SSH connection, get (or reuse) the cached SFTP channel,
+ * run `fn`, then release the connection back to the pool.
+ *
+ * The SFTP channel itself is shared across concurrent calls on the same
+ * connection; ssh2 multiplexes requests internally via request IDs.
+ */
+async function withPooledSFTP<T>(
+    config: SFTPConfig,
+    fn: (sftp: SFTPWrapper) => Promise<T>,
+): Promise<T> {
+    const { sftp, key } = await sshPool.acquireSFTP(config);
+    try {
+        return await fn(sftp);
+    } finally {
+        sshPool.release(key);
+    }
 }
 
 // ============================================================================
@@ -128,33 +80,28 @@ function joinPath(...parts: string[]): string {
 // ============================================================================
 
 export async function listDirectory(config: SFTPConfig, dirPath: string): Promise<RemoteEntry[]> {
-    const { sftp, client } = await openSFTP(config);
-    try {
-        return await new Promise((resolve, reject) => {
-            sftp.readdir(dirPath, (err, list) => {
-                if (err) { reject(err); return; }
-                const entries: RemoteEntry[] = list
-                    .filter(e => e.filename !== '.' && e.filename !== '..')
-                    .map(e => ({
-                        name: e.filename,
-                        path: joinPath(dirPath, e.filename),
-                        type: entryType(e.attrs.mode ?? 0),
-                        size: e.attrs.size ?? 0,
-                        modifiedAt: e.attrs.mtime ?? 0,
-                        permissions: modeToPermissions(e.attrs.mode ?? 0),
-                        mode: e.attrs.mode ?? 0,
-                    }))
-                    .sort((a, b) => {
-                        if (a.type === 'dir' && b.type !== 'dir') return -1;
-                        if (a.type !== 'dir' && b.type === 'dir') return 1;
-                        return a.name.localeCompare(b.name);
-                    });
-                resolve(entries);
-            });
+    return withPooledSFTP(config, (sftp) => new Promise((resolve, reject) => {
+        sftp.readdir(dirPath, (err, list) => {
+            if (err) { reject(err); return; }
+            const entries: RemoteEntry[] = list
+                .filter(e => e.filename !== '.' && e.filename !== '..')
+                .map(e => ({
+                    name: e.filename,
+                    path: joinPath(dirPath, e.filename),
+                    type: entryType(e.attrs.mode ?? 0),
+                    size: e.attrs.size ?? 0,
+                    modifiedAt: e.attrs.mtime ?? 0,
+                    permissions: modeToPermissions(e.attrs.mode ?? 0),
+                    mode: e.attrs.mode ?? 0,
+                }))
+                .sort((a, b) => {
+                    if (a.type === 'dir' && b.type !== 'dir') return -1;
+                    if (a.type !== 'dir' && b.type === 'dir') return 1;
+                    return a.name.localeCompare(b.name);
+                });
+            resolve(entries);
         });
-    } finally {
-        client.end();
-    }
+    }));
 }
 
 // ============================================================================
@@ -162,14 +109,9 @@ export async function listDirectory(config: SFTPConfig, dirPath: string): Promis
 // ============================================================================
 
 export async function makeDirectory(config: SFTPConfig, dirPath: string): Promise<void> {
-    const { sftp, client } = await openSFTP(config);
-    try {
-        await new Promise<void>((resolve, reject) => {
-            sftp.mkdir(dirPath, (err) => { err ? reject(err) : resolve(); });
-        });
-    } finally {
-        client.end();
-    }
+    return withPooledSFTP(config, (sftp) => new Promise<void>((resolve, reject) => {
+        sftp.mkdir(dirPath, (err) => { err ? reject(err) : resolve(); });
+    }));
 }
 
 // ============================================================================
@@ -199,8 +141,7 @@ async function rmRecursive(sftp: SFTPWrapper, dirPath: string): Promise<void> {
 }
 
 export async function deleteEntry(config: SFTPConfig, entryPath: string, isDirectory: boolean): Promise<void> {
-    const { sftp, client } = await openSFTP(config);
-    try {
+    return withPooledSFTP(config, async (sftp) => {
         if (isDirectory) {
             await rmRecursive(sftp, entryPath);
         } else {
@@ -208,9 +149,7 @@ export async function deleteEntry(config: SFTPConfig, entryPath: string, isDirec
                 sftp.unlink(entryPath, (err) => err ? reject(err) : resolve())
             );
         }
-    } finally {
-        client.end();
-    }
+    });
 }
 
 // ============================================================================
@@ -218,29 +157,30 @@ export async function deleteEntry(config: SFTPConfig, entryPath: string, isDirec
 // ============================================================================
 
 export async function renameEntry(config: SFTPConfig, oldPath: string, newPath: string): Promise<void> {
-    const { sftp, client } = await openSFTP(config);
-    try {
-        await new Promise<void>((resolve, reject) =>
-            sftp.rename(oldPath, newPath, (err) => err ? reject(err) : resolve())
-        );
-    } finally {
-        client.end();
-    }
+    return withPooledSFTP(config, (sftp) => new Promise<void>((resolve, reject) =>
+        sftp.rename(oldPath, newPath, (err) => err ? reject(err) : resolve())
+    ));
 }
 
 // ============================================================================
-// DOWNLOAD (returns a Web ReadableStream — keep SSH open while streaming)
+// DOWNLOAD (returns a Web ReadableStream — holds pool slot until stream ends)
 // ============================================================================
 
 export function createDownloadStream(config: SFTPConfig, filePath: string): ReadableStream<Uint8Array> {
     return new ReadableStream<Uint8Array>({
         start(controller) {
-            openSFTP(config)
-                .then(({ sftp, client }) => {
+            sshPool.acquireSFTP(config)
+                .then(({ sftp, key }) => {
                     const rs = sftp.createReadStream(filePath);
                     rs.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-                    rs.on('end', () => { client.end(); controller.close(); });
-                    rs.on('error', (err: Error) => { client.end(); controller.error(err); });
+                    rs.on('end', () => {
+                        sshPool.release(key);
+                        controller.close();
+                    });
+                    rs.on('error', (err: Error) => {
+                        sshPool.release(key);
+                        controller.error(err);
+                    });
                 })
                 .catch((err) => controller.error(err));
         },
@@ -260,9 +200,14 @@ export async function transferFiles(
     from: SFTPConfig,
     fromPaths: string[],
     to: SFTPConfig,
-    toDir: string
+    toDir: string,
 ): Promise<TransferResult> {
-    const [fromConn, toConn] = await Promise.all([openSFTP(from), openSFTP(to)]);
+    // Acquire two independent pool slots (may be the same connection if same server)
+    const [fromAcq, toAcq] = await Promise.all([
+        sshPool.acquireSFTP(from),
+        sshPool.acquireSFTP(to),
+    ]);
+
     const ok: string[] = [];
     const failed: { path: string; error: string }[] = [];
 
@@ -272,8 +217,8 @@ export async function transferFiles(
             const destPath = toDir.replace(/\/+$/, '') + '/' + fileName;
             try {
                 await new Promise<void>((resolve, reject) => {
-                    const rs = fromConn.sftp.createReadStream(srcPath);
-                    const ws = toConn.sftp.createWriteStream(destPath);
+                    const rs = fromAcq.sftp.createReadStream(srcPath);
+                    const ws = toAcq.sftp.createWriteStream(destPath);
                     rs.on('error', reject);
                     ws.on('error', reject);
                     ws.on('close', resolve);
@@ -288,8 +233,8 @@ export async function transferFiles(
             }
         }
     } finally {
-        fromConn.client.end();
-        toConn.client.end();
+        sshPool.release(fromAcq.key);
+        sshPool.release(toAcq.key);
     }
 
     return { ok, failed };
@@ -300,15 +245,10 @@ export async function transferFiles(
 // ============================================================================
 
 export async function uploadBuffer(config: SFTPConfig, remotePath: string, data: Buffer): Promise<void> {
-    const { sftp, client } = await openSFTP(config);
-    try {
-        await new Promise<void>((resolve, reject) => {
-            const ws = sftp.createWriteStream(remotePath);
-            ws.on('close', resolve);
-            ws.on('error', reject);
-            ws.end(data);
-        });
-    } finally {
-        client.end();
-    }
+    return withPooledSFTP(config, (sftp) => new Promise<void>((resolve, reject) => {
+        const ws = sftp.createWriteStream(remotePath);
+        ws.on('close', resolve);
+        ws.on('error', reject);
+        ws.end(data);
+    }));
 }

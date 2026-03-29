@@ -37,12 +37,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
         if (server.protocol === 'SSH') {
             const metrics = await getSSHMetrics({
-                host: server.host,
-                port: server.port,
-                username: server.username,
-                password: server.password ?? undefined,
-                privateKey: server.privateKey ?? undefined,
-                passphrase: server.passphrase ?? undefined,
+                id:          server.id,
+                host:        server.host,
+                port:        server.port,
+                username:    server.username,
+                password:    server.password ?? undefined,
+                privateKey:  server.privateKey ?? undefined,
+                passphrase:  server.passphrase ?? undefined,
             });
             return successResponse({ metrics: { ...metrics, latencyMs } });
         }
