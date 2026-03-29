@@ -15,11 +15,13 @@ import { Client, ConnectConfig } from 'ssh2';
 export interface ServerMetrics {
     reachable: boolean;
     latencyMs?: number;
-    cpu?: number;       // percentage 0–100
+    cpu?: number;           // percentage 0–100
+    cpuModel?: string;      // e.g. "Intel(R) Xeon(R) CPU E5-2690 v2 @ 3.00GHz"
     ram?: {
         usedBytes: number;
         totalBytes: number;
         percent: number;
+        speedMhz?: number;  // e.g. 3200 (reported as MT/s ≈ MHz for DDR)
     };
     disk?: {
         usedBytes: number;
@@ -71,12 +73,14 @@ export function checkReachability(
 // ============================================================================
 
 // One-shot bash command that collects all metrics.
-// Output: 5 lines
-//   line 1: total1 idle1      — CPU sample 1 (/proc/stat)
-//   line 2: total2 idle2      — CPU sample 2 (0.3 s later)
-//   line 3: memTotalB memAvailB — bytes
-//   line 4: diskTotalB diskUsedB — bytes (root partition)
-//   line 5: rxBytes txBytes   — cumulative (all interfaces)
+// Output: 7 lines
+//   line 1: total1 idle1          — CPU sample 1 (/proc/stat)
+//   line 2: total2 idle2          — CPU sample 2 (0.3 s later)
+//   line 3: memTotalB memAvailB   — bytes
+//   line 4: diskTotalB diskUsedB  — bytes (root partition)
+//   line 5: rxBytes txBytes       — cumulative (all interfaces)
+//   line 6: CPU model name        — e.g. "Intel(R) Xeon(R) CPU E5-2690 v2 @ 3.00GHz"
+//   line 7: RAM speed MT/s        — e.g. "3200" (may be empty if dmidecode unavailable)
 const SSH_METRICS_CMD = [
     `awk 'NR==1{for(i=2;i<=NF;i++)t+=$i;print t,$5}' /proc/stat`,
     `sleep 0.3`,
@@ -84,6 +88,8 @@ const SSH_METRICS_CMD = [
     `awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{print t*1024,a*1024}' /proc/meminfo`,
     `df -B1 / | awk 'NR==2{print $2,$3}'`,
     `awk 'NR>2{rx+=$2;tx+=$10}END{printf "%d %d\\n",rx,tx}' /proc/net/dev`,
+    `printf '%s\\n' "$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^[[:space:]]*//')"`,
+    `printf '%s\\n' "$(dmidecode -t memory 2>/dev/null | grep -i 'configured.*speed' | grep -vE 'Unknown|0 MT' | head -1 | grep -oE '[0-9]+' | head -1)"`,
 ].join('; ');
 
 interface SSHConfig {
@@ -143,6 +149,11 @@ export function getSSHMetrics(
                         const [diskTotal, diskUsed] = lines[3].trim().split(/\s+/).map(Number);
                         const [rxBytes, txBytes] = lines[4].trim().split(/\s+/).map(Number);
 
+                        // Optional hardware info (lines 5 and 6)
+                        const cpuModel = lines[5]?.trim() || undefined;
+                        const ramSpeedRaw = lines[6]?.trim();
+                        const ramSpeedMhz = ramSpeedRaw ? (parseInt(ramSpeedRaw, 10) || undefined) : undefined;
+
                         const dtotal = total2 - total1;
                         const didle = idle2 - idle1;
                         const cpu = dtotal > 0
@@ -154,12 +165,14 @@ export function getSSHMetrics(
                         done({
                             reachable: true,
                             cpu,
+                            cpuModel,
                             ram: {
                                 usedBytes: ramUsed,
                                 totalBytes: memTotal,
                                 percent: memTotal > 0
                                     ? Math.round((ramUsed / memTotal) * 100)
                                     : 0,
+                                speedMhz: ramSpeedMhz,
                             },
                             disk: {
                                 usedBytes: diskUsed,
