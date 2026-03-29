@@ -93,3 +93,13 @@ export function passkeyAuthRateLimit(ip: string): RateLimitResult {
     return rateLimit(`passkey-auth:${ip}`, 10, 5 * 60 * 1000);
 }
 
+/** 20 connection test attempts per 5 minutes per user */
+export function connectionTestRateLimit(userId: string): RateLimitResult {
+    return rateLimit(`conn-test:${userId}`, 20, 5 * 60 * 1000);
+}
+
+/** 30 connection token requests per 5 minutes per user */
+export function connectionTokenRateLimit(userId: string): RateLimitResult {
+    return rateLimit(`conn-token:${userId}`, 30, 5 * 60 * 1000);
+}
+

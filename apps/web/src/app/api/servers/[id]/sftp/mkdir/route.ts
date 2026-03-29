@@ -47,7 +47,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         return successResponse({ created: true });
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to create directory';
-        return errorResponse(message, 500);
+        console.error('SFTP mkdir error:', err);
+        return errorResponse('Failed to create directory', 500);
     }
 }

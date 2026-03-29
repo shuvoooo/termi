@@ -213,7 +213,7 @@ export default function NewServerPage() {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} method="POST" action="#">
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
                     {/* ── LEFT: Form ── */}

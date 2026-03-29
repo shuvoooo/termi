@@ -112,6 +112,7 @@ export default async function RootLayout({
                 {children}
                 <script
                     type="application/ld+json"
+                    nonce={nonce}
                     dangerouslySetInnerHTML={{
                         __html: JSON.stringify({
                             '@context': 'https://schema.org',
@@ -166,6 +167,7 @@ export default async function RootLayout({
                     }}
                 />
                 <script
+                    nonce={nonce}
                     dangerouslySetInnerHTML={{
                         __html: `
 if ('serviceWorker' in navigator) {

@@ -856,7 +856,7 @@ export default function SettingsPage() {
                     title="Change Password"
                     description="Update your account password. Use a strong, unique password."
                 >
-                    <form onSubmit={handleChangePassword} className="space-y-4">
+                    <form onSubmit={handleChangePassword} method="POST" action="#" className="space-y-4">
                         <div>
                             <label className="label">Current Password</label>
                             <div className="relative">

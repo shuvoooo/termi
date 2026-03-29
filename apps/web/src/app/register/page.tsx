@@ -97,7 +97,7 @@ export default function RegisterPage() {
                         Start managing your servers securely
                     </p>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} method="POST" action="#" className="space-y-5">
                         <div>
                             <label htmlFor="email" className="label">
                                 Email Address

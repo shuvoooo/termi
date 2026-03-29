@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         return successResponse({ deleted: true });
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to delete';
-        return errorResponse(message, 500);
+        console.error('SFTP delete error:', err);
+        return errorResponse('Delete failed', 500);
     }
 }

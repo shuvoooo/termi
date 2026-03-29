@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         return successResponse({ renamed: true });
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to rename';
-        return errorResponse(message, 500);
+        console.error('SFTP rename error:', err);
+        return errorResponse('Rename failed', 500);
     }
 }

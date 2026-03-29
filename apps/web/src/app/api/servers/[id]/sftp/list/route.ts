@@ -42,7 +42,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
         return successResponse({ entries, path: dirPath });
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to list directory';
-        return errorResponse(message, 500);
+        console.error('SFTP list error:', err);
+        return errorResponse('Failed to list directory', 500);
     }
 }

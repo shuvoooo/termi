@@ -11,6 +11,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getServerForConnection } from '@/lib/services';
 import { validateBody, successResponse, errorResponse, unauthorizedResponse, notFoundResponse } from '@/lib/api';
 import { createHash } from 'crypto';
+import { connectionTokenRateLimit } from '@/lib/rate-limit';
 
 const tokenSchema = z.object({
     serverId: z.string(),
@@ -32,6 +33,12 @@ function getJWEKey(): Uint8Array {
 export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return unauthorizedResponse();
+
+    // Rate limit: 30 token requests per 5 minutes per user
+    const rl = connectionTokenRateLimit(user.id);
+    if (!rl.allowed) {
+        return errorResponse('Too many connection requests. Please wait before trying again.', 429);
+    }
 
     const validation = await validateBody(request, tokenSchema);
     if ('error' in validation) return validation.error;

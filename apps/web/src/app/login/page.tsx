@@ -402,7 +402,7 @@ export default function LoginPage() {
                             <h1 className="text-2xl font-bold text-center mb-2">Welcome back</h1>
                             <p className="text-dark-400 text-center mb-8">Sign in to your account to continue</p>
 
-                            <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+                            <form ref={formRef} onSubmit={handleSubmit} method="POST" action="#" className="space-y-5">
                                 <div>
                                     <label htmlFor="email" className="label">Email Address</label>
                                     <input
@@ -500,7 +500,7 @@ export default function LoginPage() {
                                 </div>
                             )}
 
-                            <form onSubmit={handleVerify} className="space-y-4">
+                            <form onSubmit={handleVerify} method="POST" action="#" className="space-y-4">
                                 <div>
                                     <label htmlFor="code" className="label">
                                         {isRecoveryMode ? 'Recovery Code' : 'Verification Code'}

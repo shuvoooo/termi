@@ -10,6 +10,8 @@ import net from 'net';
 import { Client, type ConnectConfig } from 'ssh2';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
+import { validateHost } from '@/lib/security/ssrf';
+import { connectionTestRateLimit } from '@/lib/rate-limit';
 
 const schema = z.object({
     host:       z.string().min(1),
@@ -138,6 +140,12 @@ export async function POST(request: Request) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limit: 20 test attempts per 5 minutes per user
+    const rl = connectionTestRateLimit(user.id);
+    if (!rl.allowed) {
+        return Response.json({ success: false, error: 'Too many connection tests. Please wait before trying again.' }, { status: 429 });
+    }
+
     let body: unknown;
     try { body = await request.json(); }
     catch { return Response.json({ success: false, error: 'Invalid JSON' }, { status: 400 }); }
@@ -149,6 +157,12 @@ export async function POST(request: Request) {
 
     const { host, port, protocol, username, password, privateKey, passphrase } = parsed.data;
 
+    // SSRF protection: block connections to private/reserved addresses
+    const ssrfCheck = await validateHost(host, process.env.ALLOW_PRIVATE_NETWORKS === 'true');
+    if (!ssrfCheck.valid) {
+        return Response.json({ success: false, error: ssrfCheck.error || 'Invalid host' }, { status: 400 });
+    }
+
     const isSSH = protocol === 'SSH' || protocol === 'SCP';
 
     if (isSSH && username) {
@@ -156,6 +170,8 @@ export async function POST(request: Request) {
         return Response.json({
             success: result.ok,
             latency: result.latencyMs,
+            // Return the sanitised message (already mapped inside sshAuthTest); never
+            // forward raw ssh2/OS error strings that could expose server internals.
             error: result.error,
         });
     }

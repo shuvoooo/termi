@@ -3,6 +3,7 @@
  * Multipart form: file (File) + path (string — remote directory)
  */
 
+import path from 'path';
 import { getCurrentUser } from '@/lib/auth';
 import { getServerById } from '@/lib/services';
 import { uploadBuffer } from '@/lib/services/sftp.service';
@@ -12,6 +13,9 @@ import {
     unauthorizedResponse,
     notFoundResponse,
 } from '@/lib/api';
+
+// Hard cap: 500 MB per upload
+const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -36,7 +40,18 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!(file instanceof File)) return errorResponse('Missing file');
     if (typeof remotePath !== 'string' || !remotePath) return errorResponse('Missing path');
 
-    const destPath = remotePath.replace(/\/+$/, '') + '/' + file.name;
+    // Enforce upload size limit before reading into memory
+    if (file.size > MAX_UPLOAD_BYTES) {
+        return errorResponse(`File too large. Maximum allowed size is ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`, 413);
+    }
+
+    // Sanitise the filename to prevent path traversal (e.g. "../../etc/passwd")
+    const safeFileName = path.basename(file.name);
+    if (!safeFileName || safeFileName === '.' || safeFileName === '..') {
+        return errorResponse('Invalid file name', 400);
+    }
+
+    const destPath = remotePath.replace(/\/+$/, '') + '/' + safeFileName;
 
     try {
         const server = await getServerById(id, user.id);
@@ -59,7 +74,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         return successResponse({ uploaded: true, path: destPath });
     } catch (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        return errorResponse(message, 500);
+        console.error('SFTP upload error:', err);
+        return errorResponse('Upload failed', 500);
     }
 }

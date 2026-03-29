@@ -154,7 +154,7 @@ function GroupModal({
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                <form onSubmit={handleSubmit} method="POST" action="#" className="p-6 space-y-5">
                     {/* Name */}
                     <div>
                         <label className="label">Name <span className="text-red-400">*</span></label>

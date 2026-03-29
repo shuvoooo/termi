@@ -84,6 +84,12 @@ export async function createServer(
 ) {
     const { userId, name, description, groupId, host, port, protocol, username, password, privateKey, passphrase, notes, tags, ...settings } = input;
 
+    // Verify the group belongs to this user before assigning
+    if (groupId) {
+        const group = await prisma.serverGroup.findFirst({ where: { id: groupId, userId } });
+        if (!group) throw new Error('Group not found or access denied');
+    }
+
     // Encrypt sensitive credentials
     const credentials: ServerCredentials = {
         host,
@@ -279,6 +285,12 @@ export async function updateServer(
 
     if (!existing) {
         return null;
+    }
+
+    // Verify the new group belongs to this user (if group is being changed)
+    if (input.groupId) {
+        const group = await prisma.serverGroup.findFirst({ where: { id: input.groupId, userId } });
+        if (!group) throw new Error('Group not found or access denied');
     }
 
     // Build update data

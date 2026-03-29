@@ -3,8 +3,8 @@
  * 
  * Security Architecture:
  * - All credentials are encrypted using AES-256-GCM before storage
- * - Passwords are hashed using Argon2id with secure parameters
- * - Optional master key encryption using PBKDF2 key derivation
+ * - Passwords are hashed using scrypt with secure parameters (N=16384, r=8, p=1)
+ * - Optional master key encryption using PBKDF2 key derivation (600,000 iterations, SHA-256)
  * - All cryptographic operations use Node.js crypto module (FIPS-compliant)
  * 
  * SECURITY WARNING: Never log or expose encryption keys or plaintext credentials

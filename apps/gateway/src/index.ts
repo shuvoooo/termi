@@ -24,6 +24,15 @@ dotenv.config();
 const PORT = parseInt(process.env.GATEWAY_PORT || '8080', 10);
 const HOST = process.env.GATEWAY_HOST || '0.0.0.0';
 
+// Allowed origins for WebSocket connections (comma-separated list)
+// e.g. ALLOWED_ORIGINS=https://app.example.com,http://localhost:3000
+const ALLOWED_ORIGINS: Set<string> = new Set(
+    (process.env.ALLOWED_ORIGINS || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+        .split(',')
+        .map((o) => o.trim().toLowerCase())
+        .filter(Boolean)
+);
+
 // Connection limits
 const MAX_CONNECTIONS_PER_USER = 10;
 const CONNECTION_TIMEOUT = 300000; // 5 minutes — covers AWS NAT/NLB idle TCP timeout (~350 s)
@@ -105,6 +114,14 @@ const wss = new WebSocketServer({
 });
 
 wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+    // Reject connections from untrusted origins
+    const origin = (req.headers['origin'] || '').toLowerCase();
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Origin not allowed' }));
+        ws.close(4403, 'Forbidden');
+        return;
+    }
+
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
     // Extract connection parameters from query string
