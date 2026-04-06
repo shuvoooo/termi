@@ -54,19 +54,23 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      # HTTP → HTTPS redirect
-      - "traefik.http.routers.termi-web-http.rule=Host(`${WEB_DOMAIN}`)"
-      - "traefik.http.routers.termi-web-http.entrypoints=web"
-      - "traefik.http.routers.termi-web-http.middlewares=redirect-to-https"
-      # HTTPS
-      - "traefik.http.routers.termi-web.rule=Host(`${WEB_DOMAIN}`)"
-      - "traefik.http.routers.termi-web.entrypoints=websecure"
-      - "traefik.http.routers.termi-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.termi-web.loadbalancer.server.port=3000"
-      # Shared redirect middleware
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=dokploy-network"
+        # HTTP → HTTPS redirect
+        - "traefik.http.routers.termi-web-http.rule=Host(`${WEB_DOMAIN}`)"
+        - "traefik.http.routers.termi-web-http.entrypoints=web"
+        - "traefik.http.routers.termi-web-http.middlewares=redirect-to-https"
+        - "traefik.http.routers.termi-web-http.service=termi-web"          # ← add
+        # HTTPS
+        - "traefik.http.routers.termi-web.rule=Host(`${WEB_DOMAIN}`)"
+        - "traefik.http.routers.termi-web.entrypoints=websecure"
+        - "traefik.http.routers.termi-web.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.termi-web.service=termi-web"               # ← add
+        # Service
+        - "traefik.http.services.termi-web.loadbalancer.server.port=3000"
+        # Middleware
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
       - dokploy-network
 
@@ -100,10 +104,13 @@ services:
       - "traefik.http.routers.termi-gateway-http.rule=Host(`${GATEWAY_DOMAIN}`)"
       - "traefik.http.routers.termi-gateway-http.entrypoints=web"
       - "traefik.http.routers.termi-gateway-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.termi-gateway-http.service=termi-gateway"  # ← add
       # HTTPS + WebSocket
       - "traefik.http.routers.termi-gateway.rule=Host(`${GATEWAY_DOMAIN}`)"
       - "traefik.http.routers.termi-gateway.entrypoints=websecure"
       - "traefik.http.routers.termi-gateway.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.termi-gateway.service=termi-gateway"       # ← add
+      # Service
       - "traefik.http.services.termi-gateway.loadbalancer.server.port=8080"
     networks:
       - dokploy-network
