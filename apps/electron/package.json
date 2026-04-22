@@ -5,7 +5,7 @@
     "description": "Termi – desktop wrapper (Electron)",
     "main": "dist/main.js",
     "scripts": {
-        "build": "tsc && cp src/mode-selector.html dist/",
+        "build": "tsc && node scripts/copy-assets.js",
         "build:watch": "tsc --watch --preserveWatchOutput",
         "start": "electron .",
         "dev": "npm run build && electron .",
@@ -13,10 +13,14 @@
         "dist": "npm run build && electron-builder",
         "dist:mac": "npm run build && electron-builder --mac",
         "dist:win": "npm run build && electron-builder --win",
-        "dist:linux": "npm run build && electron-builder --linux"
+        "dist:linux": "npm run build && electron-builder --linux",
+        "postinstall": "node scripts/fix-node-pty-perms.js"
     },
     "dependencies": {
-        "electron-updater": "^6.3.9"
+        "@xterm/addon-fit": "^0.11.0",
+        "@xterm/xterm": "^6.0.0",
+        "electron-updater": "^6.3.9",
+        "node-pty": "^1.1.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

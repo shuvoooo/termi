@@ -41,6 +41,7 @@ extraResources:
 
 # Unpack native binaries from asar so the OS can execute them
 asarUnpack:
+  - "**/node_modules/node-pty/**"
   - "**/node_modules/cpu-features/**"
   - "**/node_modules/sshcrypto/**"
   - "**/node_modules/ssh2/**"

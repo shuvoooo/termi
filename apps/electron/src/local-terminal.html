@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Local Terminal — Termi</title>
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #0d0d0d;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* Drag region for frameless / hiddenInset title bar on macOS */
+    #titlebar {
+      -webkit-app-region: drag;
+      height: 28px;
+      background: #141414;
+      border-bottom: 1px solid #222;
+      display: flex;
+      align-items: center;
+      padding-left: 80px; /* room for traffic lights */
+      color: #666;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    #titlebar span { -webkit-app-region: no-drag; }
+
+    #shell-label {
+      margin-left: auto;
+      padding-right: 12px;
+      font-size: 10px;
+      color: #444;
+    }
+
+    #terminal-wrap {
+      position: absolute;
+      inset: 28px 0 0 0;
+      padding: 4px 6px 4px 6px;
+    }
+
+    /* xterm overrides */
+    .xterm { height: 100%; }
+    .xterm-viewport { border-radius: 0; }
+  </style>
+</head>
+<body>
+  <div id="titlebar">
+    <span id="title-text">Local Terminal</span>
+    <span id="shell-label"></span>
+  </div>
+  <div id="terminal-wrap"></div>
+
+  <script src="vendor/xterm.js"></script>
+  <script src="vendor/addon-fit.js"></script>
+  <script>
+    (async () => {
+      const platform = window.termiTerminal.platform;
+
+      // Determine shell name for the label
+      const shellName = platform === 'win32' ? 'PowerShell'
+        : (platform === 'darwin' ? 'zsh / bash' : 'bash');
+      document.getElementById('shell-label').textContent = shellName;
+
+      // ── Build xterm instance ──────────────────────────────────────────────
+      const term = new Terminal({
+        fontFamily: '"Cascadia Code", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace',
+        fontSize: 13,
+        lineHeight: 1.3,
+        cursorBlink: true,
+        scrollback: 10000,
+        theme: {
+          background:      '#0d0d0d',
+          foreground:      '#d4d4d4',
+          cursor:          '#eeeeee',
+          cursorAccent:    '#000000',
+          selectionBackground: 'rgba(255,255,255,0.15)',
+          black:           '#1e1e1e',
+          red:             '#f44747',
+          green:           '#6a9955',
+          yellow:          '#dcdcaa',
+          blue:            '#569cd6',
+          magenta:         '#c678dd',
+          cyan:            '#4ec9b0',
+          white:           '#d4d4d4',
+          brightBlack:     '#808080',
+          brightRed:       '#f44747',
+          brightGreen:     '#b5cea8',
+          brightYellow:    '#e5c07b',
+          brightBlue:      '#9cdcfe',
+          brightMagenta:   '#c678dd',
+          brightCyan:      '#56b6c2',
+          brightWhite:     '#ffffff',
+        },
+      });
+
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+
+      const wrap = document.getElementById('terminal-wrap');
+      term.open(wrap);
+      fitAddon.fit();
+
+      // ── Spawn PTY ─────────────────────────────────────────────────────────
+      const params = new URLSearchParams(window.location.search);
+      const cwd = params.get('cwd') || undefined;
+
+      const id = await window.termiTerminal.create(cwd);
+
+      // PTY → terminal display
+      window.termiTerminal.onData(id, data => term.write(data));
+
+      window.termiTerminal.onExit(id, code => {
+        term.writeln(`\r\n\x1b[90m[Process exited with code ${code}. Close this window to dismiss.]\x1b[0m`);
+        document.getElementById('title-text').textContent = 'Terminal (exited)';
+      });
+
+      // User keystrokes → PTY
+      term.onData(data => window.termiTerminal.input(id, data));
+
+      // Resize events → PTY
+      term.onResize(({ cols, rows }) => window.termiTerminal.resize(id, cols, rows));
+      window.termiTerminal.resize(id, term.cols, term.rows);
+
+      // ── Fit on window resize ──────────────────────────────────────────────
+      const ro = new ResizeObserver(() => {
+        fitAddon.fit();
+      });
+      ro.observe(wrap);
+
+      // ── Cleanup on close ──────────────────────────────────────────────────
+      window.addEventListener('beforeunload', () => {
+        window.termiTerminal.close(id);
+      });
+
+      // Focus terminal immediately
+      term.focus();
+    })();
+  </script>
+</body>
+</html>

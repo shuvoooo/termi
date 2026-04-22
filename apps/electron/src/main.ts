@@ -31,6 +31,8 @@ import {
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import os from 'os';
+import * as nodePty from 'node-pty';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -213,6 +215,7 @@ function buildTrayMenu(mode: AppMode, win: BrowserWindow): Menu {
         { label: modeLabel, enabled: false },
         { type: 'separator' },
         { label: 'Open Termi', click: () => win.show() },
+        { label: 'New Local Terminal', click: () => openLocalTerminal() },
         { label: 'Switch Mode…', click: () => promptModeSwitch(win) },
         { type: 'separator' },
         { label: 'Quit Termi', click: () => { app.quit(); } },
@@ -303,6 +306,12 @@ function buildAppMenu(mode: AppMode, win: BrowserWindow): Menu {
         {
             label: 'Window',
             submenu: [
+                {
+                    label: 'New Local Terminal',
+                    accelerator: 'CmdOrCtrl+Shift+T',
+                    click: () => openLocalTerminal(),
+                },
+                { type: 'separator' },
                 { role: 'minimize' as const },
                 { role: 'zoom' as const },
                 ...(isMac ? [
@@ -408,10 +417,95 @@ function openModeSelector(): Promise<AppMode> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Local Terminal (PTY)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ptyMap = new Map<string, nodePty.IPty>();
+const terminalWindows = new Set<BrowserWindow>();
+
+function openLocalTerminal(cwd?: string): BrowserWindow {
+    const isMac = process.platform === 'darwin';
+    const win = new BrowserWindow({
+        width: 900,
+        height: 620,
+        minWidth: 600,
+        minHeight: 400,
+        title: 'Local Terminal',
+        backgroundColor: '#0d0d0d',
+        titleBarStyle: isMac ? 'hiddenInset' : 'default',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload-terminal.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+    });
+
+    const htmlPath = path.join(__dirname, 'local-terminal.html');
+    const search = cwd ? `cwd=${encodeURIComponent(cwd)}` : '';
+    win.loadFile(htmlPath, { search });
+
+    win.on('closed', () => terminalWindows.delete(win));
+    terminalWindows.add(win);
+    return win;
+}
+
+function setupTerminalIpc(): void {
+    ipcMain.handle('terminal:create', (event, cwd?: string) => {
+        const id = crypto.randomUUID();
+        const shell_ = process.platform === 'win32'
+            ? (process.env.COMSPEC ?? 'cmd.exe')
+            : (process.env.SHELL ?? '/bin/bash');
+
+        let pty: nodePty.IPty;
+        try {
+            pty = nodePty.spawn(shell_, [], {
+                name: 'xterm-256color',
+                cols: 80,
+                rows: 24,
+                cwd: cwd ?? os.homedir(),
+                env: process.env as Record<string, string>,
+            });
+        } catch (err) {
+            console.error('[PTY] Failed to spawn shell:', err);
+            throw err;
+        }
+
+        const sender = event.sender;
+
+        pty.onData(data => {
+            if (!sender.isDestroyed()) sender.send(`terminal:data:${id}`, data);
+        });
+
+        pty.onExit(({ exitCode }) => {
+            ptyMap.delete(id);
+            if (!sender.isDestroyed()) sender.send(`terminal:exit:${id}`, exitCode ?? 0);
+        });
+
+        ptyMap.set(id, pty);
+        return id;
+    });
+
+    ipcMain.on('terminal:input', (_e, id: string, data: string) => {
+        ptyMap.get(id)?.write(data);
+    });
+
+    ipcMain.on('terminal:resize', (_e, id: string, cols: number, rows: number) => {
+        try { ptyMap.get(id)?.resize(cols, rows); } catch { /* ignore if process exited */ }
+    });
+
+    ipcMain.on('terminal:close', (_e, id: string) => {
+        const p = ptyMap.get(id);
+        if (p) { try { p.kill(); } catch { /* already dead */ } ptyMap.delete(id); }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // IPC handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
 function registerIpcHandlers(): void {
+    setupTerminalIpc();
+
     ipcMain.on('get-version', event => {
         event.returnValue = app.getVersion();
     });
