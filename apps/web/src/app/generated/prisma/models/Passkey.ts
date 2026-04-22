@@ -220,7 +220,7 @@ export type PasskeyGroupByOutputType = {
   counter: bigint
   deviceType: string
   backedUp: boolean
-  transports: string[]
+  transports: runtime.JsonValue
   createdAt: Date
   lastUsedAt: Date | null
   _count: PasskeyCountAggregateOutputType | null
@@ -230,7 +230,7 @@ export type PasskeyGroupByOutputType = {
   _max: PasskeyMaxAggregateOutputType | null
 }
 
-type GetPasskeyGroupByPayload<T extends PasskeyGroupByArgs> = Prisma.PrismaPromise<
+export type GetPasskeyGroupByPayload<T extends PasskeyGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<PasskeyGroupByOutputType, T['by']> &
       {
@@ -257,7 +257,7 @@ export type PasskeyWhereInput = {
   counter?: Prisma.BigIntFilter<"Passkey"> | bigint | number
   deviceType?: Prisma.StringFilter<"Passkey"> | string
   backedUp?: Prisma.BoolFilter<"Passkey"> | boolean
-  transports?: Prisma.StringNullableListFilter<"Passkey">
+  transports?: Prisma.JsonFilter<"Passkey">
   createdAt?: Prisma.DateTimeFilter<"Passkey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"Passkey"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -290,7 +290,7 @@ export type PasskeyWhereUniqueInput = Prisma.AtLeast<{
   counter?: Prisma.BigIntFilter<"Passkey"> | bigint | number
   deviceType?: Prisma.StringFilter<"Passkey"> | string
   backedUp?: Prisma.BoolFilter<"Passkey"> | boolean
-  transports?: Prisma.StringNullableListFilter<"Passkey">
+  transports?: Prisma.JsonFilter<"Passkey">
   createdAt?: Prisma.DateTimeFilter<"Passkey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"Passkey"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -327,7 +327,7 @@ export type PasskeyScalarWhereWithAggregatesInput = {
   counter?: Prisma.BigIntWithAggregatesFilter<"Passkey"> | bigint | number
   deviceType?: Prisma.StringWithAggregatesFilter<"Passkey"> | string
   backedUp?: Prisma.BoolWithAggregatesFilter<"Passkey"> | boolean
-  transports?: Prisma.StringNullableListFilter<"Passkey">
+  transports?: Prisma.JsonWithAggregatesFilter<"Passkey">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Passkey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Passkey"> | Date | string | null
 }
@@ -340,7 +340,7 @@ export type PasskeyCreateInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   user: Prisma.UserCreateNestedOneWithoutPasskeysInput
@@ -355,7 +355,7 @@ export type PasskeyUncheckedCreateInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
 }
@@ -368,7 +368,7 @@ export type PasskeyUpdateInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutPasskeysNestedInput
@@ -383,7 +383,7 @@ export type PasskeyUncheckedUpdateInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -397,7 +397,7 @@ export type PasskeyCreateManyInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
 }
@@ -410,7 +410,7 @@ export type PasskeyUpdateManyMutationInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -424,7 +424,7 @@ export type PasskeyUncheckedUpdateManyInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -529,17 +529,8 @@ export type PasskeyUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.PasskeyScalarWhereInput | Prisma.PasskeyScalarWhereInput[]
 }
 
-export type PasskeyCreatetransportsInput = {
-  set: string[]
-}
-
 export type BytesFieldUpdateOperationsInput = {
   set?: runtime.Bytes
-}
-
-export type PasskeyUpdatetransportsInput = {
-  set?: string[]
-  push?: string | string[]
 }
 
 export type PasskeyCreateWithoutUserInput = {
@@ -550,7 +541,7 @@ export type PasskeyCreateWithoutUserInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
 }
@@ -563,7 +554,7 @@ export type PasskeyUncheckedCreateWithoutUserInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
 }
@@ -575,7 +566,6 @@ export type PasskeyCreateOrConnectWithoutUserInput = {
 
 export type PasskeyCreateManyUserInputEnvelope = {
   data: Prisma.PasskeyCreateManyUserInput | Prisma.PasskeyCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type PasskeyUpsertWithWhereUniqueWithoutUserInput = {
@@ -606,7 +596,7 @@ export type PasskeyScalarWhereInput = {
   counter?: Prisma.BigIntFilter<"Passkey"> | bigint | number
   deviceType?: Prisma.StringFilter<"Passkey"> | string
   backedUp?: Prisma.BoolFilter<"Passkey"> | boolean
-  transports?: Prisma.StringNullableListFilter<"Passkey">
+  transports?: Prisma.JsonFilter<"Passkey">
   createdAt?: Prisma.DateTimeFilter<"Passkey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"Passkey"> | Date | string | null
 }
@@ -619,7 +609,7 @@ export type PasskeyCreateManyUserInput = {
   counter?: bigint | number
   deviceType: string
   backedUp?: boolean
-  transports?: Prisma.PasskeyCreatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
 }
@@ -632,7 +622,7 @@ export type PasskeyUpdateWithoutUserInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -645,7 +635,7 @@ export type PasskeyUncheckedUpdateWithoutUserInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -658,7 +648,7 @@ export type PasskeyUncheckedUpdateManyWithoutUserInput = {
   counter?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   deviceType?: Prisma.StringFieldUpdateOperationsInput | string
   backedUp?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  transports?: Prisma.PasskeyUpdatetransportsInput | string[]
+  transports?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -749,7 +739,7 @@ export type $PasskeyPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     counter: bigint
     deviceType: string
     backedUp: boolean
-    transports: string[]
+    transports: runtime.JsonValue
     createdAt: Date
     lastUsedAt: Date | null
   }, ExtArgs["result"]["passkey"]>
@@ -1184,7 +1174,7 @@ export interface PasskeyFieldRefs {
   readonly counter: Prisma.FieldRef<"Passkey", 'BigInt'>
   readonly deviceType: Prisma.FieldRef<"Passkey", 'String'>
   readonly backedUp: Prisma.FieldRef<"Passkey", 'Boolean'>
-  readonly transports: Prisma.FieldRef<"Passkey", 'String[]'>
+  readonly transports: Prisma.FieldRef<"Passkey", 'Json'>
   readonly createdAt: Prisma.FieldRef<"Passkey", 'DateTime'>
   readonly lastUsedAt: Prisma.FieldRef<"Passkey", 'DateTime'>
 }
@@ -1421,7 +1411,6 @@ export type PasskeyCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * The data used to create many Passkeys.
    */
   data: Prisma.PasskeyCreateManyInput | Prisma.PasskeyCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1440,7 +1429,6 @@ export type PasskeyCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensi
    * The data used to create many Passkeys.
    */
   data: Prisma.PasskeyCreateManyInput | Prisma.PasskeyCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

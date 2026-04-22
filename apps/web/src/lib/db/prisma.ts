@@ -1,40 +1,22 @@
 /**
  * Term Database Client
- * 
- * Singleton Prisma client instance with proper configuration
- * for both development and production environments.
+ *
+ * Singleton Prisma client instance for SQLite (Electron offline mode).
+ * The DATABASE_URL env var must be a file: URL, e.g. file:/path/to/termi.db
  */
 
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { PrismaClient } from '@/app/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 
-// Prevent multiple Prisma Client instances in development
-const globalForPrisma = globalThis as unknown as {
-    prisma: PrismaClient | undefined;
-    pool: Pool | undefined;
-};
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
-// Create PostgreSQL connection pool
-const pool = globalForPrisma.pool ?? new Pool({
-    connectionString: process.env.DATABASE_URL,
-});
-
-if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.pool = pool;
+function createPrismaClient() {
+    const url = process.env.DATABASE_URL ?? 'file:./termi.db';
+    const adapter = new PrismaLibSql({ url });
+    return new PrismaClient({ adapter });
 }
 
-// Create Prisma adapter
-const adapter = new PrismaPg(pool);
-
-export const prisma =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-        adapter,
-        log: process.env.NODE_ENV === 'development'
-            ? ['query', 'error', 'warn']
-            : ['error'],
-    });
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prisma = prisma;

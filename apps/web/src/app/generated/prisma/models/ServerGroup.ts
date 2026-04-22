@@ -220,7 +220,7 @@ export type ServerGroupGroupByOutputType = {
   _max: ServerGroupMaxAggregateOutputType | null
 }
 
-type GetServerGroupGroupByPayload<T extends ServerGroupGroupByArgs> = Prisma.PrismaPromise<
+export type GetServerGroupGroupByPayload<T extends ServerGroupGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ServerGroupGroupByOutputType, T['by']> &
       {
@@ -556,7 +556,6 @@ export type ServerGroupCreateOrConnectWithoutUserInput = {
 
 export type ServerGroupCreateManyUserInputEnvelope = {
   data: Prisma.ServerGroupCreateManyUserInput | Prisma.ServerGroupCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type ServerGroupUpsertWithWhereUniqueWithoutUserInput = {
@@ -1481,7 +1480,6 @@ export type ServerGroupCreateManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * The data used to create many ServerGroups.
    */
   data: Prisma.ServerGroupCreateManyInput | Prisma.ServerGroupCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1500,7 +1498,6 @@ export type ServerGroupCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ext
    * The data used to create many ServerGroups.
    */
   data: Prisma.ServerGroupCreateManyInput | Prisma.ServerGroupCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

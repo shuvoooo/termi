@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" />
+    <title>Termi — Choose Mode</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        /* Drag handle for frameless window */
+        .no-drag { -webkit-app-region: no-drag; }
+
+        /* ── Logo ── */
+        .logo { text-align: center; margin-bottom: 52px; }
+        .logo-icon { font-size: 3rem; margin-bottom: 12px; }
+        .logo h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo p { color: #94a3b8; margin-top: 8px; font-size: 0.9rem; }
+
+        /* ── Cards ── */
+        .cards { display: flex; gap: 20px; }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 32px 28px;
+            width: 240px;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        .card.online:hover  { border-color: #22c55e; box-shadow: 0 12px 40px rgba(34,197,94,0.12); }
+        .card.offline:hover { border-color: #3b82f6; box-shadow: 0 12px 40px rgba(59,130,246,0.12); }
+
+        .card-icon { font-size: 2.2rem; margin-bottom: 16px; }
+        .card h2   { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
+        .card p    { color: #94a3b8; font-size: 0.82rem; line-height: 1.55; min-height: 52px; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 18px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+        .badge::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+
+        .online  .badge { background: #052e16; color: #4ade80; }
+        .online  .badge::before { background: #22c55e; }
+        .offline .badge { background: #172554; color: #93c5fd; }
+        .offline .badge::before { background: #3b82f6; }
+
+        /* ── Loading overlay ── */
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        #overlay.visible { display: flex; }
+
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid #1e293b;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #loadingText { color: #64748b; font-size: 0.875rem; }
+
+        /* ── Footer ── */
+        footer { position: fixed; bottom: 20px; color: #334155; font-size: 0.72rem; }
+    </style>
+</head>
+<body>
+
+    <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <h1>Termi</h1>
+        <p>Secure server management — choose how you want to connect</p>
+    </div>
+
+    <div class="cards no-drag">
+        <div class="card online" onclick="choose('online')">
+            <div class="card-icon">☁️</div>
+            <h2>Online Mode</h2>
+            <p>Connect to <strong>termi.shuvoo.com</strong>.<br/>Your data lives in the cloud.</p>
+            <span class="badge">Cloud</span>
+        </div>
+
+        <div class="card offline" onclick="choose('offline')">
+            <div class="card-icon">🖥️</div>
+            <h2>Offline Mode</h2>
+            <p>Run a private local server on this machine with a local SQLite database.</p>
+            <span class="badge">Local</span>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <div class="spinner"></div>
+        <span id="loadingText">Starting local server…</span>
+    </div>
+
+    <footer>Termi v<span id="appVersion">1.0.0</span></footer>
+
+    <script>
+        // Populated by main process via preload
+        if (window.termiElectron) {
+            document.getElementById('appVersion').textContent =
+                window.termiElectron.getVersion();
+
+            window.termiElectron.onLoadingUpdate(text => {
+                document.getElementById('loadingText').textContent = text;
+            });
+        }
+
+        function choose(mode) {
+            if (mode === 'offline') {
+                document.getElementById('overlay').classList.add('visible');
+            }
+            if (window.termiElectron) {
+                window.termiElectron.selectMode(mode);
+            }
+        }
+    </script>
+</body>
+</html>

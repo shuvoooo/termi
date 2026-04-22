@@ -174,8 +174,8 @@ export async function getServers(userId: string): Promise<ServerListItem[]> {
     });
     return rows.map(({ password, host, username, ...rest }) => {
         const creds = decryptCredentials({ host, username });
-        return { ...rest, hasPassword: !!password, host: creds.host, username: creds.username };
-    });
+        return { ...rest, tags: rest.tags as string[], hasPassword: !!password, host: creds.host, username: creds.username };
+    }) as ServerListItem[];
 }
 
 export async function getServerById(
@@ -417,9 +417,9 @@ export async function searchServers(
             AND: [
                 query ? {
                     OR: [
-                        { name: { contains: query, mode: 'insensitive' } },
-                        { description: { contains: query, mode: 'insensitive' } },
-                        { tags: { has: query } },
+                        { name: { contains: query } },
+                        { description: { contains: query } },
+                        { tags: { string_contains: query } },
                     ],
                 } : {},
                 protocol ? { protocol } : {},
@@ -453,14 +453,11 @@ export async function searchServers(
             { name: 'asc' },
         ],
     });
-    return rows.map(({ password, host, username, ...rest }) => {
+    return rows.map(({ password, host, username, ...rest }: any) => {
         const creds = decryptCredentials({ host, username });
-        return { ...rest, hasPassword: !!password, host: creds.host, username: creds.username };
-    });
+        return { ...rest, tags: (rest.tags ?? []) as string[], hasPassword: !!password, host: creds.host, username: creds.username };
+    }) as ServerListItem[];
 }
-
-// ============================================================================
-// TOGGLE FAVORITE
 // ============================================================================
 
 export async function toggleFavorite(serverId: string, userId: string) {

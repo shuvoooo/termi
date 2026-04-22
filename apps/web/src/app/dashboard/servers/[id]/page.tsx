@@ -465,7 +465,7 @@ export default function ServerDetailsPage() {
                             {server.group.name}
                         </span>
                     )}
-                    {server.tags.map(t => (
+                    {(server.tags as string[]).map(t => (
                         <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{t}</span>
                     ))}
                 </div>

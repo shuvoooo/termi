@@ -172,7 +172,7 @@ export type EmailOTPGroupByOutputType = {
   _max: EmailOTPMaxAggregateOutputType | null
 }
 
-type GetEmailOTPGroupByPayload<T extends EmailOTPGroupByArgs> = Prisma.PrismaPromise<
+export type GetEmailOTPGroupByPayload<T extends EmailOTPGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<EmailOTPGroupByOutputType, T['by']> &
       {
@@ -428,7 +428,6 @@ export type EmailOTPCreateOrConnectWithoutUserInput = {
 
 export type EmailOTPCreateManyUserInputEnvelope = {
   data: Prisma.EmailOTPCreateManyUserInput | Prisma.EmailOTPCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type EmailOTPUpsertWithWhereUniqueWithoutUserInput = {
@@ -1230,7 +1229,6 @@ export type EmailOTPCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many EmailOTPS.
    */
   data: Prisma.EmailOTPCreateManyInput | Prisma.EmailOTPCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1249,7 +1247,6 @@ export type EmailOTPCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * The data used to create many EmailOTPS.
    */
   data: Prisma.EmailOTPCreateManyInput | Prisma.EmailOTPCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

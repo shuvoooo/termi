@@ -263,7 +263,7 @@ export type ServerMonitorConfigGroupByOutputType = {
   _max: ServerMonitorConfigMaxAggregateOutputType | null
 }
 
-type GetServerMonitorConfigGroupByPayload<T extends ServerMonitorConfigGroupByArgs> = Prisma.PrismaPromise<
+export type GetServerMonitorConfigGroupByPayload<T extends ServerMonitorConfigGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ServerMonitorConfigGroupByOutputType, T['by']> &
       {
@@ -691,7 +691,6 @@ export type ServerMonitorConfigCreateOrConnectWithoutUserInput = {
 
 export type ServerMonitorConfigCreateManyUserInputEnvelope = {
   data: Prisma.ServerMonitorConfigCreateManyUserInput | Prisma.ServerMonitorConfigCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type ServerMonitorConfigUpsertWithWhereUniqueWithoutUserInput = {
@@ -1658,7 +1657,6 @@ export type ServerMonitorConfigCreateManyArgs<ExtArgs extends runtime.Types.Exte
    * The data used to create many ServerMonitorConfigs.
    */
   data: Prisma.ServerMonitorConfigCreateManyInput | Prisma.ServerMonitorConfigCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1677,7 +1675,6 @@ export type ServerMonitorConfigCreateManyAndReturnArgs<ExtArgs extends runtime.T
    * The data used to create many ServerMonitorConfigs.
    */
   data: Prisma.ServerMonitorConfigCreateManyInput | Prisma.ServerMonitorConfigCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

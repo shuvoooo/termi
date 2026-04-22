@@ -313,7 +313,7 @@ export type ServerGroupByOutputType = {
   groupId: string | null
   name: string
   description: string | null
-  tags: string[]
+  tags: runtime.JsonValue
   color: string | null
   icon: string | null
   host: string
@@ -340,7 +340,7 @@ export type ServerGroupByOutputType = {
   _max: ServerMaxAggregateOutputType | null
 }
 
-type GetServerGroupByPayload<T extends ServerGroupByArgs> = Prisma.PrismaPromise<
+export type GetServerGroupByPayload<T extends ServerGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ServerGroupByOutputType, T['by']> &
       {
@@ -364,7 +364,7 @@ export type ServerWhereInput = {
   groupId?: Prisma.StringNullableFilter<"Server"> | string | null
   name?: Prisma.StringFilter<"Server"> | string
   description?: Prisma.StringNullableFilter<"Server"> | string | null
-  tags?: Prisma.StringNullableListFilter<"Server">
+  tags?: Prisma.JsonFilter<"Server">
   color?: Prisma.StringNullableFilter<"Server"> | string | null
   icon?: Prisma.StringNullableFilter<"Server"> | string | null
   host?: Prisma.StringFilter<"Server"> | string
@@ -433,7 +433,7 @@ export type ServerWhereUniqueInput = Prisma.AtLeast<{
   groupId?: Prisma.StringNullableFilter<"Server"> | string | null
   name?: Prisma.StringFilter<"Server"> | string
   description?: Prisma.StringNullableFilter<"Server"> | string | null
-  tags?: Prisma.StringNullableListFilter<"Server">
+  tags?: Prisma.JsonFilter<"Server">
   color?: Prisma.StringNullableFilter<"Server"> | string | null
   icon?: Prisma.StringNullableFilter<"Server"> | string | null
   host?: Prisma.StringFilter<"Server"> | string
@@ -502,7 +502,7 @@ export type ServerScalarWhereWithAggregatesInput = {
   groupId?: Prisma.StringNullableWithAggregatesFilter<"Server"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"Server"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Server"> | string | null
-  tags?: Prisma.StringNullableListFilter<"Server">
+  tags?: Prisma.JsonWithAggregatesFilter<"Server">
   color?: Prisma.StringNullableWithAggregatesFilter<"Server"> | string | null
   icon?: Prisma.StringNullableWithAggregatesFilter<"Server"> | string | null
   host?: Prisma.StringWithAggregatesFilter<"Server"> | string
@@ -528,7 +528,7 @@ export type ServerCreateInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -561,7 +561,7 @@ export type ServerUncheckedCreateInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -590,7 +590,7 @@ export type ServerUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -623,7 +623,7 @@ export type ServerUncheckedUpdateInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -654,7 +654,7 @@ export type ServerCreateManyInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -680,7 +680,7 @@ export type ServerUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -708,7 +708,7 @@ export type ServerUncheckedUpdateManyInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -738,14 +738,6 @@ export type ServerListRelationFilter = {
 
 export type ServerOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type StringNullableListFilter<$PrismaModel = never> = {
-  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
-  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
-  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
-  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
-  isEmpty?: boolean
 }
 
 export type ServerCountOrderByAggregateInput = {
@@ -933,15 +925,6 @@ export type ServerUncheckedUpdateManyWithoutGroupNestedInput = {
   deleteMany?: Prisma.ServerScalarWhereInput | Prisma.ServerScalarWhereInput[]
 }
 
-export type ServerCreatetagsInput = {
-  set: string[]
-}
-
-export type ServerUpdatetagsInput = {
-  set?: string[]
-  push?: string | string[]
-}
-
 export type EnumProtocolFieldUpdateOperationsInput = {
   set?: $Enums.Protocol
 }
@@ -1000,7 +983,7 @@ export type ServerCreateWithoutUserInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1031,7 +1014,7 @@ export type ServerUncheckedCreateWithoutUserInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1063,7 +1046,6 @@ export type ServerCreateOrConnectWithoutUserInput = {
 
 export type ServerCreateManyUserInputEnvelope = {
   data: Prisma.ServerCreateManyUserInput | Prisma.ServerCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type ServerUpsertWithWhereUniqueWithoutUserInput = {
@@ -1091,7 +1073,7 @@ export type ServerScalarWhereInput = {
   groupId?: Prisma.StringNullableFilter<"Server"> | string | null
   name?: Prisma.StringFilter<"Server"> | string
   description?: Prisma.StringNullableFilter<"Server"> | string | null
-  tags?: Prisma.StringNullableListFilter<"Server">
+  tags?: Prisma.JsonFilter<"Server">
   color?: Prisma.StringNullableFilter<"Server"> | string | null
   icon?: Prisma.StringNullableFilter<"Server"> | string | null
   host?: Prisma.StringFilter<"Server"> | string
@@ -1117,7 +1099,7 @@ export type ServerCreateWithoutGroupInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1148,7 +1130,7 @@ export type ServerUncheckedCreateWithoutGroupInput = {
   userId: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1180,7 +1162,6 @@ export type ServerCreateOrConnectWithoutGroupInput = {
 
 export type ServerCreateManyGroupInputEnvelope = {
   data: Prisma.ServerCreateManyGroupInput | Prisma.ServerCreateManyGroupInput[]
-  skipDuplicates?: boolean
 }
 
 export type ServerUpsertWithWhereUniqueWithoutGroupInput = {
@@ -1203,7 +1184,7 @@ export type ServerCreateWithoutConnectionsInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1235,7 +1216,7 @@ export type ServerUncheckedCreateWithoutConnectionsInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1279,7 +1260,7 @@ export type ServerUpdateWithoutConnectionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1311,7 +1292,7 @@ export type ServerUncheckedUpdateWithoutConnectionsInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1339,7 +1320,7 @@ export type ServerCreateWithoutMonitorConfigInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1371,7 +1352,7 @@ export type ServerUncheckedCreateWithoutMonitorConfigInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1415,7 +1396,7 @@ export type ServerUpdateWithoutMonitorConfigInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1447,7 +1428,7 @@ export type ServerUncheckedUpdateWithoutMonitorConfigInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1475,7 +1456,7 @@ export type ServerCreateWithoutHealthRecordsInput = {
   id?: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1507,7 +1488,7 @@ export type ServerUncheckedCreateWithoutHealthRecordsInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1551,7 +1532,7 @@ export type ServerUpdateWithoutHealthRecordsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1583,7 +1564,7 @@ export type ServerUncheckedUpdateWithoutHealthRecordsInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1612,7 +1593,7 @@ export type ServerCreateManyUserInput = {
   groupId?: string | null
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1638,7 +1619,7 @@ export type ServerUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1669,7 +1650,7 @@ export type ServerUncheckedUpdateWithoutUserInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1699,7 +1680,7 @@ export type ServerUncheckedUpdateManyWithoutUserInput = {
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1726,7 +1707,7 @@ export type ServerCreateManyGroupInput = {
   userId: string
   name: string
   description?: string | null
-  tags?: Prisma.ServerCreatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: string | null
   icon?: string | null
   host: string
@@ -1752,7 +1733,7 @@ export type ServerUpdateWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1783,7 +1764,7 @@ export type ServerUncheckedUpdateWithoutGroupInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1813,7 +1794,7 @@ export type ServerUncheckedUpdateManyWithoutGroupInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  tags?: Prisma.ServerUpdatetagsInput | string[]
+  tags?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   color?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   host?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2030,7 +2011,7 @@ export type $ServerPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     groupId: string | null
     name: string
     description: string | null
-    tags: string[]
+    tags: runtime.JsonValue
     color: string | null
     icon: string | null
     host: string
@@ -2483,7 +2464,7 @@ export interface ServerFieldRefs {
   readonly groupId: Prisma.FieldRef<"Server", 'String'>
   readonly name: Prisma.FieldRef<"Server", 'String'>
   readonly description: Prisma.FieldRef<"Server", 'String'>
-  readonly tags: Prisma.FieldRef<"Server", 'String[]'>
+  readonly tags: Prisma.FieldRef<"Server", 'Json'>
   readonly color: Prisma.FieldRef<"Server", 'String'>
   readonly icon: Prisma.FieldRef<"Server", 'String'>
   readonly host: Prisma.FieldRef<"Server", 'String'>
@@ -2737,7 +2718,6 @@ export type ServerCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * The data used to create many Servers.
    */
   data: Prisma.ServerCreateManyInput | Prisma.ServerCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -2756,7 +2736,6 @@ export type ServerCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensio
    * The data used to create many Servers.
    */
   data: Prisma.ServerCreateManyInput | Prisma.ServerCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

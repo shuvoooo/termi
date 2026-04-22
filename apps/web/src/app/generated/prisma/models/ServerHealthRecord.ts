@@ -225,7 +225,7 @@ export type ServerHealthRecordGroupByOutputType = {
   _max: ServerHealthRecordMaxAggregateOutputType | null
 }
 
-type GetServerHealthRecordGroupByPayload<T extends ServerHealthRecordGroupByArgs> = Prisma.PrismaPromise<
+export type GetServerHealthRecordGroupByPayload<T extends ServerHealthRecordGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ServerHealthRecordGroupByOutputType, T['by']> &
       {
@@ -522,7 +522,6 @@ export type ServerHealthRecordCreateOrConnectWithoutServerInput = {
 
 export type ServerHealthRecordCreateManyServerInputEnvelope = {
   data: Prisma.ServerHealthRecordCreateManyServerInput | Prisma.ServerHealthRecordCreateManyServerInput[]
-  skipDuplicates?: boolean
 }
 
 export type ServerHealthRecordUpsertWithWhereUniqueWithoutServerInput = {
@@ -1335,7 +1334,6 @@ export type ServerHealthRecordCreateManyArgs<ExtArgs extends runtime.Types.Exten
    * The data used to create many ServerHealthRecords.
    */
   data: Prisma.ServerHealthRecordCreateManyInput | Prisma.ServerHealthRecordCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1354,7 +1352,6 @@ export type ServerHealthRecordCreateManyAndReturnArgs<ExtArgs extends runtime.Ty
    * The data used to create many ServerHealthRecords.
    */
   data: Prisma.ServerHealthRecordCreateManyInput | Prisma.ServerHealthRecordCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

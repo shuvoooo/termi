@@ -306,7 +306,7 @@ function GridCard({
                             {server.group.name}
                         </span>
                     )}
-                    {server.tags.slice(0, 2).map((tag) => (
+                    {(server.tags as string[]).slice(0, 2).map((tag) => (
                         <span key={tag} className="badge text-[10px] px-1.5 py-0.5 bg-dark-700 text-dark-300">
                             {tag}
                         </span>
@@ -435,7 +435,7 @@ function ListRow({
                         {server.group.name}
                     </span>
                 )}
-                {server.tags.slice(0, 2).map((tag) => (
+                {(server.tags as string[]).slice(0, 2).map((tag) => (
                     <span key={tag} className="badge text-[10px] px-1.5 py-0.5 bg-dark-700 text-dark-300">{tag}</span>
                 ))}
             </div>

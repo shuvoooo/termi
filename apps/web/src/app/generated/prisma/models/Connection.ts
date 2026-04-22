@@ -231,7 +231,7 @@ export type ConnectionGroupByOutputType = {
   _max: ConnectionMaxAggregateOutputType | null
 }
 
-type GetConnectionGroupByPayload<T extends ConnectionGroupByArgs> = Prisma.PrismaPromise<
+export type GetConnectionGroupByPayload<T extends ConnectionGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ConnectionGroupByOutputType, T['by']> &
       {
@@ -562,7 +562,6 @@ export type ConnectionCreateOrConnectWithoutServerInput = {
 
 export type ConnectionCreateManyServerInputEnvelope = {
   data: Prisma.ConnectionCreateManyServerInput | Prisma.ConnectionCreateManyServerInput[]
-  skipDuplicates?: boolean
 }
 
 export type ConnectionUpsertWithWhereUniqueWithoutServerInput = {
@@ -1397,7 +1396,6 @@ export type ConnectionCreateManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * The data used to create many Connections.
    */
   data: Prisma.ConnectionCreateManyInput | Prisma.ConnectionCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1416,7 +1414,6 @@ export type ConnectionCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Exte
    * The data used to create many Connections.
    */
   data: Prisma.ConnectionCreateManyInput | Prisma.ConnectionCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

@@ -158,7 +158,7 @@ export type RecoveryCodeGroupByOutputType = {
   _max: RecoveryCodeMaxAggregateOutputType | null
 }
 
-type GetRecoveryCodeGroupByPayload<T extends RecoveryCodeGroupByArgs> = Prisma.PrismaPromise<
+export type GetRecoveryCodeGroupByPayload<T extends RecoveryCodeGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<RecoveryCodeGroupByOutputType, T['by']> &
       {
@@ -380,7 +380,6 @@ export type RecoveryCodeCreateOrConnectWithoutUserInput = {
 
 export type RecoveryCodeCreateManyUserInputEnvelope = {
   data: Prisma.RecoveryCodeCreateManyUserInput | Prisma.RecoveryCodeCreateManyUserInput[]
-  skipDuplicates?: boolean
 }
 
 export type RecoveryCodeUpsertWithWhereUniqueWithoutUserInput = {
@@ -1160,7 +1159,6 @@ export type RecoveryCodeCreateManyArgs<ExtArgs extends runtime.Types.Extensions.
    * The data used to create many RecoveryCodes.
    */
   data: Prisma.RecoveryCodeCreateManyInput | Prisma.RecoveryCodeCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1179,7 +1177,6 @@ export type RecoveryCodeCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * The data used to create many RecoveryCodes.
    */
   data: Prisma.RecoveryCodeCreateManyInput | Prisma.RecoveryCodeCreateManyInput[]
-  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

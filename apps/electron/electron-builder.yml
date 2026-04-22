@@ -1,0 +1,99 @@
+appId: com.termi.desktop
+productName: Termi
+copyright: "Copyright © 2024 Termi Contributors"
+
+# ── Source ────────────────────────────────────────────────────────────────────
+directories:
+  output: dist
+  buildResources: buildfiles
+
+# Files packed into app.asar (only the compiled Electron main + preload)
+files:
+  - dist/**/*
+  - package.json
+  - "!node_modules/**"
+
+# ── Bundled resources (outside asar so Node.js can access them) ───────────────
+extraResources:
+  # Next.js standalone server
+  - from: "../../apps/web/.next/standalone"
+    to: web
+    filter: ["**"]
+  # Static assets (must sit inside standalone/.next/static)
+  - from: "../../apps/web/.next/static"
+    to: web/.next/static
+    filter: ["**"]
+  # Public assets
+  - from: "../../apps/web/public"
+    to: web/public
+    filter: ["**"]
+  # WebSocket gateway
+  - from: "../../apps/gateway/dist"
+    to: gateway
+    filter: ["**"]
+  # Gateway node_modules (includes ssh2 native addon)
+  - from: "../../apps/gateway/node_modules"
+    to: gateway/node_modules
+    filter: ["**"]
+  # Empty SQLite database template (created during build)
+  - from: resources/empty.db
+    to: empty.db
+
+# Unpack native binaries from asar so the OS can execute them
+asarUnpack:
+  - "**/node_modules/cpu-features/**"
+  - "**/node_modules/sshcrypto/**"
+  - "**/node_modules/ssh2/**"
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  entitlements: buildfiles/entitlements.mac.plist
+  entitlementsInherit: buildfiles/entitlements.mac.plist
+
+dmg:
+  contents:
+    - x: 410
+      y: 150
+      type: link
+      path: /Applications
+    - x: 130
+      y: 150
+      type: file
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: buildfiles/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
+linux:
+  category: Development
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: buildfiles/icon.png

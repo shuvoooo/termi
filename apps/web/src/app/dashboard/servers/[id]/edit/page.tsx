@@ -84,7 +84,7 @@ export default function EditServerPage() {
                 authMethod:  s.hasPrivateKey ? 'key' : 'password',
                 password: '', privateKey: '', passphrase: '',
                 notes:       s.notes       ?? '',
-                tags:        s.tags        ?? [],
+                tags:        (s.tags as string[]) ?? [],
             });
             if (groupData.success) setGroups(groupData.data.groups);
         }).catch(() => router.push('/dashboard'))

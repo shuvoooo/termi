@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ============================================================================
@@ -126,7 +126,7 @@ model Server {
   // Display info
   name        String
   description String?
-  tags        String[]
+  tags        Json    @default("[]")
   color       String?
   icon        String?
 
@@ -265,7 +265,7 @@ model Passkey {
   counter             BigInt    @default(0)         // Signature counter (replay protection)
   deviceType          String                        // 'singleDevice' | 'multiDevice'
   backedUp            Boolean   @default(false)     // Synced passkey?
-  transports          String[]                      // e.g. ["internal", "hybrid"]
+  transports          Json     @default("[]")        // e.g. ["internal", "hybrid"]
   createdAt           DateTime  @default(now())
   lastUsedAt          DateTime?
 

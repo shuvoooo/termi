@@ -5,13 +5,13 @@
  * Run with: npx tsx prisma/seed.ts
  */
 
-import {PrismaPg} from '@prisma/adapter-pg'
+import { PrismaLibSql } from '@prisma/adapter-libsql'
 import 'dotenv/config'
 import {PrismaClient, Protocol} from "@/app/generated/prisma/client";
 import {encrypt, hashPassword, serializeEncrypted} from "@/lib/crypto";
 
-const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
+const adapter = new PrismaLibSql({
+    url: process.env.DATABASE_URL ?? 'file:./dev.db',
 })
 
 const prisma = new PrismaClient({
