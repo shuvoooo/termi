@@ -21,7 +21,7 @@
     "db:generate": "npm run db:generate --workspace=apps/web",
     "db:seed": "npm run db:seed --workspace=apps/web",
     "db:studio": "npm run db:studio --workspace=apps/web",
-    "electron:dev": "concurrently \"npm run dev\" \"npm run dev:gateway\" \"sleep 5 && npm run start --workspace=apps/electron\"",
+    "electron:dev": "npm run build --workspace=apps/electron && concurrently \"npm run dev\" \"npm run dev:gateway\" \"sleep 10 && npm run start --workspace=apps/electron\"",
     "electron:build": "bash scripts/electron-build.sh",
     "electron:build:mac": "bash scripts/electron-build.sh --mac",
     "electron:build:win": "bash scripts/electron-build.sh --win",

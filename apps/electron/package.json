@@ -5,9 +5,10 @@
     "description": "Termi – desktop wrapper (Electron)",
     "main": "dist/main.js",
     "scripts": {
-        "build": "tsc",
-        "build:watch": "tsc --watch",
+        "build": "tsc && cp src/mode-selector.html dist/",
+        "build:watch": "tsc --watch --preserveWatchOutput",
         "start": "electron .",
+        "dev": "npm run build && electron .",
         "pack": "electron-builder --dir",
         "dist": "npm run build && electron-builder",
         "dist:mac": "npm run build && electron-builder --mac",
