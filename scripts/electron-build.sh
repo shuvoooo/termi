@@ -31,6 +31,7 @@ npm run build --workspace=apps/web
 
 # Copy static assets into the standalone directory
 echo "  Copying static assets…"
+mkdir -p apps/web/.next/standalone/.next
 cp -r apps/web/.next/static  apps/web/.next/standalone/.next/static
 cp -r apps/web/public        apps/web/.next/standalone/public
 
@@ -47,7 +48,6 @@ TEMPLATE_DB="$ROOT/apps/electron/resources/empty.db"
   cd "$ROOT/apps/web"
   DATABASE_URL="file:$TEMPLATE_DB" \
       npx prisma db push \
-          --skip-generate \
           --accept-data-loss
 )
 echo "  Template created: $TEMPLATE_DB"
@@ -78,4 +78,4 @@ case "$TARGET_FLAG" in
 esac
 
 echo ""
-echo "✅  Build complete. Distributables are in apps/electron/dist/"
+echo "✅  Build complete. Distributables are in apps/electron/release/"

@@ -18,6 +18,7 @@
 import {
     app,
     BrowserWindow,
+    BrowserView,
     Menu,
     Tray,
     ipcMain,
@@ -215,7 +216,7 @@ function buildTrayMenu(mode: AppMode, win: BrowserWindow): Menu {
         { label: modeLabel, enabled: false },
         { type: 'separator' },
         { label: 'Open Termi', click: () => win.show() },
-        { label: 'New Local Terminal', click: () => openLocalTerminal() },
+        { label: 'Toggle Local Terminal', click: () => toggleTerminalPanel(win) },
         { label: 'Switch Mode…', click: () => promptModeSwitch(win) },
         { type: 'separator' },
         { label: 'Quit Termi', click: () => { app.quit(); } },
@@ -307,9 +308,12 @@ function buildAppMenu(mode: AppMode, win: BrowserWindow): Menu {
             label: 'Window',
             submenu: [
                 {
-                    label: 'New Local Terminal',
+                    label: 'Toggle Local Terminal',
                     accelerator: 'CmdOrCtrl+Shift+T',
-                    click: () => openLocalTerminal(),
+                    click: () => {
+                        if (mainWin) toggleTerminalPanel(mainWin);
+                        else openLocalTerminal();
+                    },
                 },
                 { type: 'separator' },
                 { role: 'minimize' as const },
@@ -359,6 +363,8 @@ function createWindow(mode: AppMode, url: string): BrowserWindow {
             allowRunningInsecureContent: mode === 'offline',
         },
     });
+
+    mainWin = win;
 
     win.once('ready-to-show', () => win.show());
     win.loadURL(url);
@@ -422,6 +428,68 @@ function openModeSelector(): Promise<AppMode> {
 
 const ptyMap = new Map<string, nodePty.IPty>();
 const terminalWindows = new Set<BrowserWindow>();
+
+// ── In-app terminal panel (BrowserView overlay, used in online mode) ──────────
+let mainWin:      BrowserWindow | null = null;
+let terminalPanel: BrowserView  | null = null;
+let panelVisible                       = false;
+let panelLoaded                        = false;
+
+function getOrCreatePanel(): BrowserView {
+    if (!terminalPanel) {
+        terminalPanel = new BrowserView({
+            webPreferences: {
+                preload:          path.join(__dirname, 'preload-terminal.js'),
+                nodeIntegration:  false,
+                contextIsolation: true,
+            },
+        });
+        // Auto-open DevTools in development to diagnose issues
+        if (IS_DEV) {
+            terminalPanel.webContents.openDevTools({ mode: 'detach' });
+        }
+    }
+    return terminalPanel;
+}
+
+function showTerminalPanel(win: BrowserWindow): void {
+    const panel = getOrCreatePanel();
+
+    if (!panelVisible) {
+        win.addBrowserView(panel);
+
+        // Auto-resize with window so we don't need a manual resize handler
+        panel.setAutoResize({ width: true, height: true });
+
+        const [width, height] = win.getContentSize();
+        panel.setBounds({ x: 0, y: 0, width, height });
+
+        // Load AFTER bounds are set so xterm.js sees the correct viewport size
+        if (!panelLoaded) {
+            panel.webContents.loadFile(
+                path.join(__dirname, 'local-terminal.html'),
+                { search: 'panel=1' },
+            );
+            panelLoaded = true;
+        }
+
+        panelVisible = true;
+    }
+
+    panel.webContents.focus();
+}
+
+function hideTerminalPanel(win: BrowserWindow): void {
+    if (terminalPanel && panelVisible) {
+        win.removeBrowserView(terminalPanel);
+        panelVisible = false;
+    }
+}
+
+function toggleTerminalPanel(win: BrowserWindow): void {
+    if (panelVisible) hideTerminalPanel(win);
+    else showTerminalPanel(win);
+}
 
 function openLocalTerminal(cwd?: string): BrowserWindow {
     const isMac = process.platform === 'darwin';
@@ -505,6 +573,11 @@ function setupTerminalIpc(): void {
 
 function registerIpcHandlers(): void {
     setupTerminalIpc();
+
+    // Terminal panel (WebContentsView overlay for online mode)
+    ipcMain.on('terminal:show-panel',   () => { if (mainWin) showTerminalPanel(mainWin); });
+    ipcMain.on('terminal:hide-panel',   () => { if (mainWin) hideTerminalPanel(mainWin); });
+    ipcMain.on('terminal:toggle-panel', () => { if (mainWin) toggleTerminalPanel(mainWin); });
 
     ipcMain.on('get-version', event => {
         event.returnValue = app.getVersion();

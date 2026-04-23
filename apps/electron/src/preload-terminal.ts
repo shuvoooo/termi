@@ -40,6 +40,9 @@ contextBridge.exposeInMainWorld('termiTerminal', {
         return () => ipcRenderer.removeListener(ch, fn);
     },
 
+    /** Close the terminal panel overlay (only meaningful in panel mode). */
+    closePanel: (): void => ipcRenderer.send('terminal:hide-panel'),
+
     platform: process.platform,
     homedir: os.homedir(),
 });

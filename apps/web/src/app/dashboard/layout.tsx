@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
     Terminal,
     Server,
@@ -15,9 +16,15 @@ import {
     Search,
     Shield,
     Monitor,
+    SquareTerminal,
 } from 'lucide-react';
 import { SessionsProvider } from './sessions-context';
 import SessionsWorkspace from './sessions-workspace';
+
+const LocalTerminalPanel = dynamic(
+    () => import('@/components/terminal/LocalTerminalPanel'),
+    { ssr: false }
+);
 
 interface User {
     id: string;
@@ -40,8 +47,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isElectron, setIsElectron] = useState(false);
 
     const isSessionsPage = pathname === '/dashboard/sessions';
+    const isTerminalPage = pathname === '/dashboard/local-terminal';
+
+    useEffect(() => {
+        setIsElectron(!!(window as Window & { termiElectron?: unknown }).termiElectron);
+    }, []);
 
     useEffect(() => {
         async function fetchUser() {
@@ -66,6 +79,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             return () => clearTimeout(t);
         }
     }, [isSessionsPage]);
+
+    // Refit terminal when navigating to terminal page
+    useEffect(() => {
+        if (isTerminalPage) {
+            const t = setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+            return () => clearTimeout(t);
+        }
+    }, [isTerminalPage]);
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -157,6 +178,22 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             );
                         })}
+
+                        {/* Local Terminal — only shown in Electron desktop app */}
+                        {isElectron && (
+                            <Link
+                                href="/dashboard/local-terminal"
+                                onClick={() => setSidebarOpen(false)}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                    isTerminalPage
+                                        ? 'bg-primary-500/20 text-primary-400'
+                                        : 'text-dark-300 hover:bg-dark-800 hover:text-white'
+                                }`}
+                            >
+                                <SquareTerminal className="w-5 h-5" />
+                                Local Terminal
+                            </Link>
+                        )}
                     </nav>
 
                     {/* User */}
@@ -212,8 +249,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                     </main>
                 </div>
 
-                {/* Regular page content — hidden on sessions page */}
-                {!isSessionsPage && (
+                {/* Local terminal — always mounted so PTY session persists.
+                    Full-height, no padding. Hidden when on other pages. */}
+                <div className={`${isTerminalPage ? 'flex flex-col' : 'hidden'} h-screen lg:h-screen`}>
+                    <LocalTerminalPanel />
+                </div>
+
+                {/* Regular page content — hidden on sessions and terminal pages */}
+                {!isSessionsPage && !isTerminalPage && (
                     <main className="p-4 lg:p-8">{children}</main>
                 )}
             </div>
@@ -228,3 +271,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </SessionsProvider>
     );
 }
+

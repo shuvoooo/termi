@@ -2,16 +2,31 @@ appId: com.termi.desktop
 productName: Termi
 copyright: "Copyright © 2024 Termi Contributors"
 
+# Skip native module rebuild — node-pty ships N-API prebuilts that are ABI-stable
+npmRebuild: false
+
 # ── Source ────────────────────────────────────────────────────────────────────
 directories:
-  output: dist
+  output: release
   buildResources: buildfiles
 
-# Files packed into app.asar (only the compiled Electron main + preload)
+# Files packed into app.asar (compiled Electron main + preload + node-pty from root)
 files:
   - dist/**/*
+  - "!dist/*.dmg"
+  - "!dist/*.zip"
+  - "!dist/*.exe"
+  - "!dist/*.blockmap"
+  - "!dist/*.yaml"
+  - "!dist/mac*/**"
+  - "!dist/linux*/**"
+  - "!dist/win*/**"
   - package.json
   - "!node_modules/**"
+  # node-pty is hoisted to root node_modules by npm workspaces — include it explicitly
+  - from: "../../node_modules/node-pty"
+    to: node_modules/node-pty
+    filter: "**/*"
 
 # ── Bundled resources (outside asar so Node.js can access them) ───────────────
 extraResources:
@@ -48,6 +63,7 @@ asarUnpack:
 
 # ── macOS ─────────────────────────────────────────────────────────────────────
 mac:
+  icon: buildfiles/icon.icns
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false

@@ -973,7 +973,10 @@
   version "1.0.0"
   resolved "file:apps/electron"
   dependencies:
+    "@xterm/addon-fit" "^0.11.0"
+    "@xterm/xterm" "^6.0.0"
     electron-updater "^6.3.9"
+    node-pty "^1.1.0"
 
 "@termi/gateway@file:/Users/shuvo/Developments/MyPersonal/termi/apps/gateway":
   version "1.0.0"
@@ -2598,7 +2601,7 @@ electron-updater@^6.3.9:
     semver "~7.7.3"
     tiny-typed-emitter "^2.1.0"
 
-electron@^33.0.0:
+electron@33.4.11:
   version "33.4.11"
   resolved "https://registry.npmjs.org/electron/-/electron-33.4.11.tgz"
   integrity sha512-xmdAs5QWRkInC7TpXGNvzo/7exojubk+72jn1oJL7keNeIlw7xNglf8TGtJtkR4rWC5FJq0oXiIXPS9BcK2Irg==
@@ -4672,6 +4675,11 @@ node-addon-api@^1.6.3:
   resolved "https://registry.npmjs.org/node-addon-api/-/node-addon-api-1.7.2.tgz"
   integrity sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==
 
+node-addon-api@^7.1.0:
+  version "7.1.1"
+  resolved "https://registry.npmjs.org/node-addon-api/-/node-addon-api-7.1.1.tgz"
+  integrity sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==
+
 node-api-version@^0.2.0:
   version "0.2.1"
   resolved "https://registry.npmjs.org/node-api-version/-/node-api-version-0.2.1.tgz"
@@ -4726,6 +4734,13 @@ node-gyp@^9.0.0:
     semver "^7.3.5"
     tar "^6.1.2"
     which "^2.0.2"
+
+node-pty@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.npmjs.org/node-pty/-/node-pty-1.1.0.tgz"
+  integrity sha512-20JqtutY6JPXTUnL0ij1uad7Qe1baT46lyolh2sSENDd4sTzKZ4nmAFkeAARDKwmlLjPx6XKRlwRUxwjOy+lUg==
+  dependencies:
+    node-addon-api "^7.1.0"
 
 node-releases@^2.0.27:
   version "2.0.27"
